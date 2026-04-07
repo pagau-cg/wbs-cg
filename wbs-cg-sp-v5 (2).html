@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WBS CG — Construction Gauthier</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#0078D4;--blue-lt:#EFF6FC;--blue-md:#BAD7F0;
+  --teal:#107C55;--teal-lt:#DDF6EC;--teal-md:#7FD4B2;
+  --amber:#7A5C00;--amber-lt:#FFF8E1;
+  --red:#A4262C;--red-lt:#FDE7E9;
+  --purple:#5C2D91;--purple-lt:#F0EBF8;
+  --g1:#F3F2F1;--g2:#EDEBE9;--g3:#C8C6C4;--g4:#8A8886;--g5:#605E5C;--g6:#323130;
+  --white:#fff;--sh:0 2px 8px rgba(0,0,0,.10);--r:4px;
+  --font:'Segoe UI',system-ui,sans-serif;--mono:'Cascadia Code','Courier New',monospace;
+}
+body{font-family:var(--font);font-size:14px;color:var(--g6);background:var(--g1);min-height:100vh}
+.app{display:flex;flex-direction:column;min-height:100vh}
+
+/* Header */
+.hdr{background:var(--blue);color:#fff;padding:0 20px;height:50px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh);flex-shrink:0;user-select:none}
+.hdr-logo{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.hdr-proj{background:rgba(255,255,255,.18);border-radius:99px;padding:3px 14px;font-size:13px;cursor:pointer;border:none;color:#fff;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hdr-proj:hover{background:rgba(255,255,255,.28)}
+.hdr-sp{flex:1}
+.hbtn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:var(--r);padding:5px 12px;font-size:12px;cursor:pointer;font-family:var(--font);display:inline-flex;align-items:center;gap:5px}
+.hbtn:hover{background:rgba(255,255,255,.28)}
+
+/* Layout */
+.body{display:flex;flex:1;overflow:hidden}
+.sidebar{width:200px;background:var(--white);border-right:1px solid var(--g3);padding:10px 0;flex-shrink:0;overflow-y:auto}
+.main{flex:1;overflow-y:auto;padding:20px}
+
+/* Nav */
+.nsec{padding:0 12px 3px;font-size:10px;font-weight:700;color:var(--g4);text-transform:uppercase;letter-spacing:.07em;margin-top:10px}
+.nit{display:flex;align-items:center;gap:7px;padding:7px 14px;cursor:pointer;color:var(--g5);font-size:13px;border-left:3px solid transparent;user-select:none;transition:background .1s}
+.nit:hover{background:var(--g1);color:var(--g6)}
+.nit.on{background:var(--blue-lt);color:var(--blue);font-weight:600;border-left-color:var(--blue)}
+.nbadge{margin-left:auto;background:var(--blue);color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;font-weight:700}
+.ndiv{border-top:1px solid var(--g2);margin:8px 14px}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.sc{background:var(--white);border-radius:var(--r);padding:12px 14px;border:1px solid var(--g3)}
+.sc-l{font-size:10px;color:var(--g4);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.sc-v{font-size:22px;font-weight:700;color:var(--g6)}
+.warn{color:var(--amber)}
+.ok{color:var(--teal)}
+
+/* Cards */
+.card{background:var(--white);border:1px solid var(--g3);border-radius:var(--r);margin-bottom:14px}
+.ch{padding:11px 14px;border-bottom:1px solid var(--g2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ct{font-size:14px;font-weight:600}
+.cb{padding:14px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r);border:1px solid var(--g3);background:var(--white);cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;color:var(--g6);transition:all .12s;user-select:none}
+.btn:hover{background:var(--g1);border-color:var(--g4)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.bp{background:var(--blue);color:#fff;border-color:var(--blue)}.bp:hover{background:#106EBE;border-color:#106EBE}
+.bt{background:var(--teal);color:#fff;border-color:var(--teal)}.bt:hover{background:#0A6042}
+.bd{color:var(--red);border-color:#F1AFAF}.bd:hover{background:var(--red-lt)}
+.bg{border-color:transparent;background:transparent}.bg:hover{background:var(--g1);border-color:transparent}
+.sm{padding:3px 9px;font-size:12px}
+
+/* Form */
+.fr{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px}
+.ff{display:flex;flex-direction:column;gap:3px}
+.ff label{font-size:11px;color:var(--g5);font-weight:600}
+.ff input,.ff select,.ff textarea{border:1px solid var(--g3);border-radius:var(--r);padding:6px 9px;font-family:var(--font);font-size:13px;color:var(--g6);background:var(--white);outline:none;transition:border-color .15s}
+.ff input:focus,.ff select:focus,.ff textarea:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,120,212,.15)}
+
+/* WBS Tree */
+.tree{display:flex;flex-direction:column;gap:4px}
+.wn{border:1px solid var(--g3);border-radius:var(--r);background:var(--white);transition:box-shadow .12s}
+.wn:hover{box-shadow:var(--sh)}
+.wn.l1{border-left:4px solid var(--blue)}
+.wn.l2{margin-left:18px;border-left:4px solid var(--teal)}
+.wn.l3{margin-left:36px;border-left:4px solid #E3A900}
+.wn.l4{margin-left:54px;border-left:4px solid var(--purple)}
+.wn-head{padding:9px 12px;display:flex;align-items:center;gap:7px;cursor:pointer}
+.wn-code{font-family:var(--mono);font-size:12px;font-weight:700;min-width:96px;color:var(--g6)}
+.wn-desc{font-size:13px;flex:1}
+.wn-acts{display:flex;gap:4px;margin-left:auto;flex-shrink:0}
+.wn-body{padding:6px 12px 10px 12px;border-top:1px solid var(--g2);display:flex;flex-wrap:wrap;gap:3px}
+
+/* Chips MF */
+.chip{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:99px;font-size:11px;font-family:var(--mono);font-weight:600;border:1px solid}
+.chip-mf{background:var(--blue-lt);color:var(--blue);border-color:var(--blue-md)}
+.chip-mf button{background:none;border:none;cursor:pointer;color:#6CA3C9;font-size:13px;line-height:1;padding:0}.chip-mf button:hover{color:var(--red)}
+.chip-nomap{background:var(--amber-lt);color:var(--amber);border-color:#E8D08A;font-size:10px}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:99px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-blue{background:var(--blue-lt);color:var(--blue)}
+.b-teal{background:var(--teal-lt);color:var(--teal)}
+.b-amber{background:var(--amber-lt);color:var(--amber)}
+.b-purple{background:var(--purple-lt);color:var(--purple)}
+.b-gray{background:var(--g2);color:var(--g5)}
+.b-red{background:var(--red-lt);color:var(--red)}
+
+/* Discipline grid */
+.disc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+.disc-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--g3);border-radius:var(--r);cursor:pointer;user-select:none;transition:all .12s;background:var(--white)}
+.disc-item:hover{border-color:var(--blue-md);background:var(--blue-lt)}
+.disc-item.on{border-color:var(--blue-md);background:var(--blue-lt)}
+.disc-item.on .disc-cb{background:var(--blue);border-color:var(--blue);color:#fff}
+.disc-cb{width:16px;height:16px;border:2px solid var(--g3);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;transition:all .12s}
+.disc-code{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);min-width:24px}
+.disc-desc{font-size:12px;color:var(--g6);flex:1}
+
+/* Secteur chips */
+.sec-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.sec-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;border:1px solid var(--g3);background:var(--white);font-size:13px}
+.sec-chip.global{background:var(--teal-lt);border-color:var(--teal-md);color:var(--teal);font-weight:600}
+.sec-chip button{background:none;border:none;cursor:pointer;color:var(--g4);font-size:14px;line-height:1;padding:0}.sec-chip button:hover{color:var(--red)}
+
+/* Lot form */
+.lot-form{background:var(--g1);border:1px solid var(--g3);border-radius:var(--r);padding:14px;margin-bottom:8px}
+.lot-form-title{font-size:12px;font-weight:700;color:var(--g5);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+
+/* MF selector */
+.mf-search-area{margin-bottom:8px}
+.mf-list-scroll{max-height:240px;overflow-y:auto;border:1px solid var(--g3);border-radius:var(--r);background:var(--g1)}
+.mf-row{display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--g2)}
+.mf-row:last-child{border-bottom:none}
+.mf-row:hover{background:var(--white)}
+.mf-row.sel{background:var(--teal-lt)}
+.mf-row.sel .mf-cb{background:var(--teal);border-color:var(--teal);color:#fff}
+.mf-cb{width:16px;height:16px;border:2px solid var(--g3);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;transition:all .12s}
+
+/* Progress */
+.prog{height:5px;background:var(--g2);border-radius:99px;margin-bottom:16px;overflow:hidden}
+.prog-b{height:100%;background:linear-gradient(90deg,var(--blue),var(--teal));border-radius:99px;transition:width .4s}
+
+/* Paste zone */
+.pz{border:2px dashed var(--g3);border-radius:var(--r);padding:12px;background:var(--g1)}
+.pz textarea{width:100%;background:transparent;border:none;outline:none;font-family:var(--mono);font-size:12px;color:var(--g6);min-height:100px;resize:vertical}
+
+/* Tables */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{background:var(--g1);padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--g4);text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--g3);position:sticky;top:0}
+.tbl td{padding:7px 10px;border-bottom:1px solid var(--g2);vertical-align:middle}
+.tbl tr:hover td{background:var(--g1)}
+.tbl tr:last-child td{border-bottom:none}
+
+/* Modal */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:200;align-items:center;justify-content:center}
+.ov.open{display:flex}
+.modal{background:var(--white);border-radius:6px;width:540px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.22)}
+.mh{padding:14px 18px;border-bottom:1px solid var(--g2);display:flex;align-items:center;justify-content:space-between}
+.mh h3{font-size:15px;font-weight:600}
+.mb{padding:14px 18px;overflow-y:auto;flex:1}
+.mf-modal-foot{padding:10px 18px;border-top:1px solid var(--g2);display:flex;justify-content:flex-end;gap:8px}
+
+/* Toast */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--g6);color:#fff;padding:9px 16px;border-radius:var(--r);font-size:13px;z-index:999;opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* Misc */
+.hidden{display:none}
+.empty{text-align:center;padding:2rem 1rem;color:var(--g4);font-size:13px}
+.tip{font-size:11px;color:var(--g4);margin-top:3px;line-height:1.5}
+.dvdr{border:none;border-top:1px solid var(--g2);margin:12px 0}
+code{font-family:var(--mono);font-size:12px;font-weight:700}
+.step-label{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:700;flex-shrink:0}
+.rule-box{background:var(--amber-lt);border:1px solid #E8D08A;border-radius:var(--r);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--amber);line-height:1.7}
+.rule-box strong{font-weight:700}
+
+/* Phase tabs */
+.phase-tabs{display:flex;gap:0;margin-bottom:14px;border:1px solid var(--g3);border-radius:var(--r);overflow:hidden}
+.ptab{flex:1;padding:8px;text-align:center;cursor:pointer;font-size:13px;font-weight:500;background:var(--white);color:var(--g5);border-right:1px solid var(--g3);transition:all .12s;user-select:none}
+.ptab:last-child{border-right:none}
+.ptab:hover{background:var(--g1)}
+.ptab.on{background:var(--blue);color:#fff}
+.ptab.off{background:var(--g1);color:var(--g4);text-decoration:line-through}
+
+@media(max-width:680px){.sidebar{display:none}.stats{grid-template-columns:repeat(2,1fr)}}
+
+.sp-bar{display:flex;align-items:center;gap:10px;padding:7px 20px;font-size:12px;flex-shrink:0;flex-wrap:wrap}
+.sp-bar.connected{background:#EFF6FC;border-bottom:2px solid #BAD7F0}
+.sp-bar.noproject{background:var(--amber-lt);border-bottom:2px solid #E8D08A}
+.sp-bar.offline{background:var(--g1);border-bottom:1px solid var(--g3)}
+.sp-proj-tag{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);background:var(--white);border:1px solid var(--blue-md);border-radius:99px;padding:2px 10px}
+.sp-proj-name{font-weight:500;color:var(--g6)}
+.sp-saved-at{color:var(--g4);font-size:11px}
+
+</style>
+</head>
+<body>
+<script>
+// Auto-resize iframe height — envoie la hauteur au parent SP
+function notifyHeight(){
+  const h = document.body.scrollHeight;
+  if(window.parent && window.parent !== window){
+    window.parent.postMessage({height: h}, '*');
+  }
+}
+window.addEventListener('load', function(){
+  notifyHeight();
+  setInterval(notifyHeight, 1000);
+});
+new ResizeObserver(notifyHeight).observe(document.body);
+</script>
+<div class="app">
+
+<!-- BARRE PROJET SHAREPOINT -->
+<div id="sp-project-bar" class="sp-bar connected" style="display:none">
+  <span style="font-size:13px;color:var(--g5)">Projet actif :</span>
+  <span class="sp-proj-tag" id="sp-proj-num">—</span>
+  <span class="sp-proj-name" id="sp-proj-nom">—</span>
+  <span class="sp-saved-at" id="sp-proj-saved"></span>
+  <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+    <span id="sp-status" style="font-size:11px;color:var(--g4)"></span>
+    <button id="sp-save-btn" class="hbtn" style="background:var(--teal);border-color:var(--teal)" onclick="spSave()">💾 Sauvegarder SP</button>
+    <button class="hbtn" onclick="document.getElementById('sp-proj-modal').classList.add('open')" style="background:rgba(0,120,212,.12);color:var(--blue);border-color:var(--blue-md)">🔄 Changer de projet</button>
+  </div>
+</div>
+
+<div id="sp-noproject-bar" class="sp-bar noproject" style="display:none">
+  <span style="font-size:13px;font-weight:600;color:var(--amber)">⚠ Aucun projet sélectionné</span>
+  <span style="color:var(--g5);font-size:12px">Sélectionnez un projet pour commencer.</span>
+  <button class="btn bp sm" style="margin-left:auto" onclick="document.getElementById('sp-proj-modal').classList.add('open')">📂 Sélectionner un projet</button>
+</div>
+
+<div id="sp-offline-bar" class="sp-bar offline" style="display:none">
+  <span style="font-size:12px;color:var(--g5)">🖥 Mode hors SharePoint — sauvegarde locale uniquement</span>
+  <button class="hbtn" style="margin-left:auto" onclick="saveLocal()">💾 Sauvegarder localement</button>
+</div>
+
+<div class="app">
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-logo">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="1" fill="white" opacity=".9"/><rect x="11" y="2" width="7" height="7" rx="1" fill="white" opacity=".6"/><rect x="2" y="11" width="7" height="7" rx="1" fill="white" opacity=".6"/><rect x="11" y="11" width="7" height="7" rx="1" fill="white" opacity=".35"/></svg>
+    WBS · Construction Gauthier
+  </div>
+  <button class="hdr-proj" onclick="renameProj()">✏ <span id="hdr-name">Nouveau projet</span></button>
+  <div class="hdr-sp"></div>
+  <button class="hbtn" onclick="saveLocal()">💾 Sauvegarder</button>
+  <button class="hbtn" onclick="doExportExcel()">📊 Excel</button>
+  <button class="hbtn" onclick="doExportCSV()">📄 CSV</button>
+</header>
+
+<div class="body">
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="nsec" style="margin-top:6px">Configuration WBS</div>
+  <div class="nit on" id="nav-phases"   onclick="goTo('phases')">  <span>1️⃣</span> Phases<span class="nbadge" id="nb-phases">–</span></div>
+  <div class="nit"    id="nav-secteurs" onclick="goTo('secteurs')"><span>2️⃣</span> Secteurs<span class="nbadge" id="nb-sec">0</span></div>
+  <div class="nit"    id="nav-discs"    onclick="goTo('discs')">   <span>3️⃣</span> Disciplines<span class="nbadge" id="nb-disc">0</span></div>
+  <div class="nit"    id="nav-lots"     onclick="goTo('lots')">    <span>4️⃣</span> Lots L4<span class="nbadge" id="nb-lots">0</span></div>
+  <div class="ndiv"></div>
+  <div class="nsec">Budget</div>
+  <div class="nit"    id="nav-import"   onclick="goTo('import')">  <span>📋</span> Import MF<span class="nbadge" id="nb-mf">0</span></div>
+  <div class="nit"    id="nav-mapping"  onclick="goTo('mapping')"> <span>🔗</span> Mapping<span class="nbadge" id="nb-links">0</span></div>
+  <div class="ndiv"></div>
+  <div class="nsec">Livrables</div>
+  <div class="nit"    id="nav-review"   onclick="goTo('review')">  <span>✅</span> Révision</div>
+  <div class="ndiv"></div>
+  <div class="nit" onclick="loadLocal()" style="font-size:12px"><span>📂</span> Charger</div>
+  <div class="nit" onclick="resetAll()"  style="font-size:12px"><span>🔄</span> Réinitialiser</div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+<div class="prog"><div class="prog-b" id="prog-b" style="width:14%"></div></div>
+
+<div class="stats">
+  <div class="sc"><div class="sc-l">Secteurs</div>  <div class="sc-v" id="s-sec">0</div></div>
+  <div class="sc"><div class="sc-l">Lots L4</div>    <div class="sc-v" id="s-lots">0</div></div>
+  <div class="sc"><div class="sc-l">Avancement global</div><div class="sc-v ok" id="s-pct">0%</div></div>
+  <div class="sc"><div class="sc-l">Lots non mappés</div><div class="sc-v warn" id="s-unmap">0</div></div>
+</div>
+
+<!-- ══ ÉTAPE 1 : PHASES ══ -->
+<div id="view-phases">
+  <div class="card">
+    <div class="ch"><span class="step-label">1</span><span class="ct">Phases de niveau 1 — Structure fixe CG (Annexe P-06)</span></div>
+    <div class="cb">
+      <div class="rule-box">📌 <strong>Annexe P-06 :</strong> Les phases 1, 2 et 3 sont fixes et ne peuvent pas être modifiées. La phase <strong>2 — Construction</strong> est toujours obligatoire.</div>
+      <div class="phase-tabs">
+        <div class="ptab on"  id="ptab-1" onclick="togglePhase(1)">1 — Préconstruction</div>
+        <div class="ptab on"  id="ptab-2" style="cursor:default">2 — Construction <span class="badge b-blue" style="font-size:10px;margin-left:4px">Obligatoire</span></div>
+        <div class="ptab on"  id="ptab-3" onclick="togglePhase(3)">3 — Mise en service</div>
+      </div>
+      <p class="tip">Cliquez sur une phase pour l'activer ou la désactiver selon les besoins du projet.</p>
+      <div style="margin-top:14px;display:flex;gap:8px">
+        <button class="btn bp" onclick="goTo('secteurs')">Suivant : Définir les secteurs →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ÉTAPE 2 : SECTEURS ══ -->
+<div id="view-secteurs" class="hidden">
+  <div class="card">
+    <div class="ch"><span class="step-label">2</span><span class="ct">Secteurs — Niveau 2</span>
+      <span class="badge b-gray" style="margin-left:4px">Format : 2 chiffres obligatoires</span>
+    </div>
+    <div class="cb">
+      <div class="rule-box">📌 <strong>Règle P-06 :</strong> Code <strong>00 = Global</strong> (travaux non sectorisés) — toujours présent. Numérotation dans l'ordre logique d'exécution. Toujours 2 chiffres. Aucune lettre.</div>
+
+      <div class="sec-list" id="sec-list">
+        <!-- rendu dynamique -->
+      </div>
+
+      <div class="fr" style="margin-top:10px">
+        <div class="ff">
+          <label>Description du secteur</label>
+          <input id="sec-desc" type="text" placeholder="ex: Secteur nord, Bloc A, Stationnement…" style="width:260px"/>
+        </div>
+        <div class="ff" style="align-self:flex-end">
+          <button class="btn bp" onclick="addSecteur()">+ Ajouter secteur</button>
+        </div>
+      </div>
+      <p class="tip">Le secteur 00 — Global est toujours présent et ne peut pas être supprimé.</p>
+      <div style="margin-top:14px;display:flex;gap:8px">
+        <button class="btn" onclick="goTo('phases')">← Retour</button>
+        <button class="btn bp" onclick="goTo('discs')">Suivant : Disciplines →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ÉTAPE 3 : DISCIPLINES ══ -->
+<div id="view-discs" class="hidden">
+  <div class="card">
+    <div class="ch"><span class="step-label">3</span><span class="ct">Disciplines — Niveau 3 (Codes fixes CG)</span>
+      <span class="badge b-gray" style="margin-left:4px">21 disciplines corporatives</span>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn sm" onclick="selAllDisc()">Tout sélect.</button>
+        <button class="btn sm" onclick="deselAllDisc()">Tout désélect.</button>
+      </div>
+    </div>
+    <div class="cb">
+      <div class="rule-box">📌 <strong>Annexe P-06 :</strong> Ces codes sont corporatifs et <u>ne doivent pas être modifiés</u>. N'activez que les disciplines applicables au projet.</div>
+      <div class="disc-grid" id="disc-grid"><!-- rendu dynamique --></div>
+      <div style="margin-top:14px;display:flex;gap:8px">
+        <button class="btn" onclick="goTo('secteurs')">← Retour</button>
+        <button class="btn bp" onclick="goTo('lots')">Suivant : Créer les lots →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ÉTAPE 4 : LOTS L4 ══ -->
+<div id="view-lots" class="hidden">
+  <div class="card">
+    <div class="ch"><span class="step-label">4</span><span class="ct">Lots mesurables — Niveau 4 (créés par le CP)</span></div>
+    <div class="cb">
+      <div class="rule-box">📌 <strong>Règle P-06 :</strong> Chaque lot doit être <strong>mesurable</strong>, <strong>planifiable</strong>, avoir <u>un ou plusieurs codes MF rattachés</u>, et permettre un <strong>% d'avancement objectif</strong>.<br>
+      ✔ "Semelles secteur 1" &nbsp;✔ "Murs fondation secteur 1" &nbsp; ❌ "Structure complète" &nbsp; ❌ "Divers"</div>
+
+      <!-- Lot creation form -->
+      <div class="lot-form">
+        <div class="lot-form-title">Nouveau lot</div>
+        <div class="fr">
+          <div class="ff">
+            <label>Phase</label>
+            <select id="lot-phase" style="width:170px" onchange="updateLotPreview()">
+              <option value="1">1 — Préconstruction</option>
+              <option value="2" selected>2 — Construction</option>
+              <option value="3">3 — Mise en service</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label>Secteur</label>
+            <select id="lot-sec" style="width:160px" onchange="updateLotPreview()"><!-- dynamic --></select>
+          </div>
+          <div class="ff">
+            <label>Discipline</label>
+            <select id="lot-disc" style="width:200px" onchange="onDiscChange()"><!-- dynamic --></select>
+          </div>
+          <div class="ff">
+            <label>N° lot</label>
+            <input id="lot-num" type="number" min="1" max="99" value="1" style="width:65px" oninput="updateLotPreview()"/>
+          </div>
+        </div>
+        <div class="fr">
+          <div class="ff" style="flex:1;min-width:250px">
+            <label>Description du lot</label>
+            <input id="lot-desc" type="text" placeholder='ex: Excavation bâtiment secteur 1' oninput="updateLotPreview()"/>
+          </div>
+          <div class="ff" style="width:90px">
+            <label>Quantité prévue</label>
+            <input id="lot-qty" type="number" min="0" step="0.01" placeholder="0" style="width:90px"/>
+          </div>
+          <div class="ff" style="width:110px">
+            <label>Unité de mesure</label>
+            <select id="lot-unit" style="width:110px"></select>
+          </div>
+          <div class="ff">
+            <label>Aperçu du code</label>
+            <code id="lot-prev" style="padding:7px 10px;background:var(--blue-lt);border:1px solid var(--blue-md);border-radius:var(--r);font-size:13px">—</code>
+          </div>
+          <div class="ff" style="align-self:flex-end">
+            <button class="btn bp" onclick="addLot()">+ Ajouter lot</button>
+          </div>
+        </div>
+        <!-- MF quick-attach -->
+        <div>
+          <label style="font-size:11px;color:var(--g5);font-weight:600;display:block;margin-bottom:5px">Codes Masterformat suggérés pour cette discipline</label>
+          <div id="mf-suggest-chips" style="display:flex;flex-wrap:wrap;gap:4px;min-height:28px">
+            <span style="font-size:12px;color:var(--g4)">Sélectionnez une discipline ci-dessus…</span>
+          </div>
+          <p class="tip" style="margin-top:4px">Cliquez pour sélectionner · Les codes sélectionnés seront rattachés au lot à sa création.</p>
+        </div>
+      </div>
+
+      <!-- Tree view -->
+      <div class="ch" style="background:var(--g1);border-radius:var(--r);border:1px solid var(--g3);margin-bottom:8px;padding:8px 12px">
+        <span style="font-size:13px;font-weight:600">Arborescence WBS du projet</span>
+        <div style="margin-left:auto;display:flex;gap:4px;flex-wrap:wrap">
+          <span class="badge b-blue" style="font-size:10px">■ Phase</span>
+          <span class="badge b-teal" style="font-size:10px">■ Secteur</span>
+          <span class="badge" style="background:#FFF8E1;color:#7A5C00;font-size:10px">■ Discipline</span>
+          <span class="badge b-purple" style="font-size:10px">■ Lot</span>
+        </div>
+      </div>
+      <div class="tree" id="wbs-tree"><div class="empty">Aucun lot créé — utilisez le formulaire ci-dessus.</div></div>
+
+      <div style="margin-top:14px;display:flex;gap:8px">
+        <button class="btn" onclick="goTo('discs')">← Retour</button>
+        <button class="btn bp" onclick="goTo('import')">Suivant : Import MF →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ IMPORT MF ══ -->
+<div id="view-import" class="hidden">
+  <div class="card">
+    <div class="ch"><span>📋</span><span class="ct">Importer les codes Masterformat (DDN Gauthier)</span></div>
+    <div class="cb">
+      <p style="font-size:13px;color:var(--g5);margin-bottom:10px">Copiez-collez depuis votre estimation. Format accepté : <code>Code[TAB]Description[TAB]Montant</code> — séparés par tabulation ou point-virgule.</p>
+      <div class="pz"><textarea id="mf-paste" rows="7" placeholder="03 10 00&#9;Coffrage pour béton&#9;48 000&#10;03 20 00&#9;Armature pour béton&#9;22 000&#10;03 30 00&#9;Béton coulé en place&#9;95 000&#10;05 12 23&#9;Acier de construction&#9;180 000&#10;..."></textarea></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn bp"  onclick="importMF()">📥 Importer</button>
+        <button class="btn bt"  onclick="loadDDNBaseline()">⚡ Charger baseline DDN Gauthier (198 codes)</button>
+        <button class="btn bd sm" onclick="clearMF()" style="margin-left:auto">Tout effacer</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><span>📑</span><span class="ct">Codes importés</span>
+      <span class="badge b-blue" id="mf-cnt" style="margin-left:6px">0</span>
+      <div style="margin-left:auto"><input id="mf-srch" type="text" placeholder="Filtrer…" style="width:170px;padding:4px 9px;border:1px solid var(--g3);border-radius:var(--r);font-size:12px" oninput="renderMFList()"/></div>
+    </div>
+    <div class="cb" style="padding:0;overflow-x:auto"><div id="mf-list"><div class="empty">Aucun code importé.</div></div></div>
+  </div>
+</div>
+
+<!-- ══ MAPPING ══ -->
+<div id="view-mapping" class="hidden">
+  <div class="card">
+    <div class="ch"><span>🔗</span><span class="ct">Mapping Lots L4 ↔ Masterformat</span>
+      <button class="btn bt sm" onclick="autoMap()" style="margin-left:auto">⚡ Mapping automatique</button>
+    </div>
+    <div class="cb">
+      <p style="font-size:13px;color:var(--g5);margin-bottom:12px">Le mapping automatique associe les codes MF à chaque lot selon la discipline. Ajustez manuellement si nécessaire. <strong>Aucun budget MF ne doit rester non mappé.</strong></p>
+      <div id="map-body"><div class="empty">Créez des lots L4 et importez des codes MF d'abord.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REVIEW ══ -->
+<div id="view-review" class="hidden">
+  <div class="card">
+    <div class="ch"><span>✅</span><span class="ct">Révision — WBS complet</span>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn bt sm" onclick="doExportExcel()">📊 Excel</button>
+        <button class="btn sm"    onclick="doExportCSV()">📄 CSV</button>
+      </div>
+    </div>
+    <div class="cb" style="padding:0;overflow-x:auto" id="review-body"><div class="empty">Aucune donnée.</div></div>
+  </div>
+</div>
+
+</main>
+</div><!-- .body -->
+</div><!-- .app -->
+
+<!-- MODAL MF selector (for manual lot mapping) -->
+<div class="ov" id="mf-modal">
+  <div class="modal">
+    <div class="mh">
+      <h3>Codes Masterformat</h3>
+      <button class="btn bg sm" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mb">
+      <p style="font-size:12px;color:var(--g4);margin-bottom:8px">Lot : <code id="modal-lot-code"></code> — <span id="modal-lot-desc"></span></p>
+      <div class="mf-search-area">
+        <input id="modal-srch" type="text" placeholder="Filtrer les codes MF…" style="width:100%;padding:6px 10px;border:1px solid var(--g3);border-radius:var(--r);font-size:13px" oninput="renderModalMF()"/>
+      </div>
+      <div class="mf-list-scroll" id="modal-mf-items"></div>
+    </div>
+    <div class="mf-modal-foot"><button class="btn bp" onclick="closeModal()">Confirmer</button></div>
+  </div>
+</div>
+
+
+<!-- MODAL Avancement -->
+<div class="ov" id="av-modal">
+  <div class="modal" style="width:420px">
+    <div class="mh"><h3>Avancement du lot</h3><button class="btn bg sm" onclick="closeAvModal()">✕</button></div>
+    <div class="mb">
+      <p style="margin-bottom:12px"><code id="av-lot-code" style="font-size:14px"></code> &nbsp;—&nbsp; <span id="av-lot-desc" style="font-size:13px"></span></p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div class="ff"><label>Quantité prévue</label><input id="av-qty-prev" type="number" min="0" step="0.01" style="width:100%"/></div>
+        <div class="ff"><label>Unité</label><select id="av-unit-sel" style="width:100%"></select></div>
+        <div class="ff"><label>Quantité réalisée</label><input id="av-qty-real" type="number" min="0" step="0.01" style="width:100%" oninput="calcAvPct()"/></div>
+        <div class="ff"><label>% Avancement calculé</label>
+          <div id="av-pct-calc" style="padding:7px 10px;background:var(--teal-lt);border:1px solid var(--teal-md);border-radius:var(--r);font-size:14px;font-weight:700;color:var(--teal)">0%</div>
+        </div>
+      </div>
+      <div class="ff" style="margin-bottom:12px">
+        <label>% Avancement (saisie directe du chantier)</label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <input type="range" id="av-pct-slider" min="0" max="100" step="1" value="0" oninput="syncSlider(this.value)" style="flex:1"/>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input id="av-pct-input" type="number" min="0" max="100" value="0" style="width:60px;text-align:center" oninput="syncSlider(this.value)"/>
+            <span style="font-size:13px;font-weight:600">%</span>
+          </div>
+        </div>
+        <div id="av-progress-bar" style="height:8px;background:var(--g2);border-radius:99px;margin-top:8px;overflow:hidden">
+          <div id="av-progress-fill" style="height:100%;width:0%;border-radius:99px;background:var(--teal);transition:width .3s"></div>
+        </div>
+      </div>
+      <div class="ff">
+        <label>Note chantier</label>
+        <textarea id="av-note" rows="2" placeholder="Observations, contraintes, prochaines étapes…" style="width:100%;resize:vertical"></textarea>
+      </div>
+      <p class="tip" style="margin-top:8px">📱 Cette fenêtre peut être utilisée directement depuis le chantier (mobile/tablette).</p>
+    </div>
+    <div class="mf-modal-foot">
+      <button class="btn" onclick="closeAvModal()">Annuler</button>
+      <button class="btn bp" onclick="saveAvancement()">✓ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL Sélecteur de projet SP -->
+<div class="ov" id="sp-proj-modal">
+  <div class="modal" style="width:600px">
+    <div class="mh">
+      <h3>Sélectionner un projet</h3>
+      <button class="btn bg sm" onclick="document.getElementById('sp-proj-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="mb" style="padding:0">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--g2);display:flex;align-items:center;gap:8px">
+        <input id="sp-proj-search" type="text" placeholder="Rechercher par numéro ou nom de projet…"
+          style="flex:1;padding:7px 10px;border:1px solid var(--g3);border-radius:var(--r);font-size:13px"
+          oninput="renderProjectList()"/>
+        <button class="btn sm" onclick="spLoadProjects()">🔄 Actualiser</button>
+      </div>
+      <div id="sp-proj-list" style="max-height:420px;overflow-y:auto">
+        <div style="padding:2rem;text-align:center;color:var(--g4);font-size:13px">Chargement…</div>
+      </div>
+    </div>
+    <div class="mf-modal-foot" style="justify-content:space-between">
+      <span style="font-size:11px;color:var(--g4)">« Projets » dans SharePoint</span>
+      <button class="btn" onclick="document.getElementById('sp-proj-modal').classList.remove('open')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+</div><!-- .app -->
+
+<script>
+const P06_DATA = {"disciplines":[{"code":"00","desc":"Préconstruction","default_metric":"Forfait","metric_opts":["Forfait","Hre","%"]},{"code":"01","desc":"Frais généraux de projet","default_metric":"Sem","metric_opts":["Sem","Hre","Forfait"]},{"code":"02","desc":"Contrôle qualité","default_metric":"Hre","metric_opts":["Hre","Forfait","Un"]},{"code":"03","desc":"SST","default_metric":"Hre","metric_opts":["Hre","Forfait"]},{"code":"04","desc":"Démolition","default_metric":"m²","metric_opts":["m²","m³","Pi.lin","Forfait"]},{"code":"05","desc":"Civil","default_metric":"m³","metric_opts":["m³","m²","Pi.lin","T","Forfait"]},{"code":"06","desc":"Fondations","default_metric":"m²","metric_opts":["m²","m³","Pi.lin","m.cu","Forfait"]},{"code":"07","desc":"Structure","default_metric":"m²","metric_opts":["m²","m.cu","Pi.lin","Forfait"]},{"code":"08","desc":"Murs extérieurs","default_metric":"m²","metric_opts":["m²","Pi.lin","Forfait"]},{"code":"09","desc":"Toiture","default_metric":"m²","metric_opts":["m²","Pi.lin","Forfait"]},{"code":"10","desc":"Cloisons intérieures","default_metric":"m²","metric_opts":["m²","Pi.lin","Un","Forfait"]},{"code":"11","desc":"Finis muraux","default_metric":"m²","metric_opts":["m²","Pi.lin","Forfait"]},{"code":"12","desc":"Plafonds","default_metric":"m²","metric_opts":["m²","Un","Forfait"]},{"code":"13","desc":"Planchers","default_metric":"m²","metric_opts":["m²","Pi.lin","Un","Forfait"]},{"code":"14","desc":"Mobilier intégré","default_metric":"Un","metric_opts":["Un","Pi.lin","Forfait"]},{"code":"15","desc":"Plomberie","default_metric":"Pi.lin","metric_opts":["Pi.lin","Un","Forfait"]},{"code":"16","desc":"CVAC","default_metric":"Pi.lin","metric_opts":["Pi.lin","Un","Forfait"]},{"code":"17","desc":"Électricité","default_metric":"Pi.lin","metric_opts":["Pi.lin","Un","Forfait"]},{"code":"18","desc":"Protection incendie","default_metric":"Pi.lin","metric_opts":["Pi.lin","Un","Forfait"]},{"code":"19","desc":"Mise en service","default_metric":"Forfait","metric_opts":["Forfait","Un","Hre"]},{"code":"20","desc":"Ascenseur","default_metric":"Un","metric_opts":["Un","Forfait"]}],"mf_suggestions":{"00":["01 00 01","01 35 21","01 35 29"],"01":["01 00 01","01 51 00","01 52 00","01 56 00","01 73 00","01 74 00","01 74 19","01 98 00","01 98 01"],"02":["01 45 00"],"03":["01 35 29"],"04":["02 41 13","02 41 16","02 41 19","02 41 20","02 81 00"],"05":["31 00 99","31 10 00","31 20 00","31 23 16","31 23 23","31 25 00","32 12 16","33 05 16"],"06":["03 10 00","03 20 00","03 30 00","03 35 00","03 41 00"],"07":["03 10 00","03 20 00","03 30 00","05 12 23","06 10 53","06 17 00","06 17 53","06 18 00"],"08":["07 11 13","07 12 13","07 21 00","07 24 00","07 25 00","07 27 00","07 42 00","07 46 00","07 50 00","07 62 00","07 71 00","07 92 00"],"09":["07 50 00","07 71 00","07 72 00"],"10":["05 50 00","06 10 53","06 20 00","09 21 16","09 22 16","09 28 13"],"11":["09 28 13","09 30 00","09 51 00","09 65 00","09 67 00","09 68 00","09 69 00","09 91 00","09 96 00"],"12":["09 51 00","09 54 00","09 57 00","09 58 00"],"13":["03 35 00","09 30 00","09 65 00","09 67 00","09 68 00"],"14":["06 40 00","12 50 00"],"15":["22 05 00","22 07 00","22 10 00","22 11 00","22 13 00","22 14 00","22 15 00","22 16 00","22 40 00","22 42 00","22 45 00","22 47 00"],"16":["23 05 00","23 07 00","23 09 00","23 31 00","23 33 00","23 36 00","23 37 00","23 74 00","23 82 00"],"17":["26 05 00","26 09 00","26 20 00","26 24 00","26 27 00","26 28 00","26 50 00","26 51 00","26 56 00"],"18":["21 05 00","21 10 00","21 13 00","21 22 00"],"19":["01 91 31","01 91 41"],"20":["14 20 03"]},"all_mf":[{"code":"01 00 01","desc":"Supervision de chantier et coordination technique"},{"code":"01 35 21","desc":"Exigences LEED"},{"code":"01 35 29","desc":"Santé et Sécurité"},{"code":"01 45 00","desc":"Contrôle de la qualité"},{"code":"01 51 00","desc":"Services d'utilités temporaires"},{"code":"01 52 00","desc":"Installation de chantier"},{"code":"01 56 00","desc":"Ouvrages d'accès et de protections temporaires"},{"code":"01 73 00","desc":"Exécution des travaux"},{"code":"01 74 00","desc":"Nettoyage"},{"code":"01 74 19","desc":"Gestion et élimination des déchets"},{"code":"01 91 31","desc":"Plan de mise en service (MS)"},{"code":"01 91 41","desc":"Plan de mise en service (MS) Formation"},{"code":"01 98 00","desc":"Assurances et cautionnement (Deux fois dans l'estimateur 01 43 00)"},{"code":"01 98 01","desc":"Permis"},{"code":"02 27 13","desc":"Analyse thermographique & inspection"},{"code":"02 41 13","desc":"Enlèvement d'un pavage"},{"code":"02 41 16","desc":"Démolition de structures"},{"code":"02 41 19","desc":"Démolition sélective des composants extérieurs des bâtiments"},{"code":"02 41 20","desc":"Démolition sélective des composants intérieurs des bâtiments"},{"code":"03 10 00","desc":"Coffrage pour béton"},{"code":"03 11 19","desc":"Coffrage isolant pour béton"},{"code":"03 20 00","desc":"Armature pour béton"},{"code":"03 30 00","desc":"Béton coulé en place"},{"code":"03 35 00","desc":"Finition de surfaces en béton"},{"code":"03 41 00","desc":"Éléments préfabriqués en béton structural"},{"code":"03 45 00","desc":"Éléments préfabriqués en béton architectural"},{"code":"04 05 00","desc":"Maçonnerie"},{"code":"04 22 00","desc":"Bloc de béton"},{"code":"05 12 23","desc":"Acier de construction pour bâtiments"},{"code":"05 50 00","desc":"Ouvrages métalliques / Métaux ouvrés"},{"code":"06 10 53","desc":"Charpenterie diverse"},{"code":"06 15 00","desc":"Platelage en bois"},{"code":"06 17 00","desc":"Éléments d'ossature en bois préfabriqués"},{"code":"06 17 53","desc":"Fermes en bois préfabriquées"},{"code":"06 18 00","desc":"Ouvrages en lamellé-collé"},{"code":"06 20 00","desc":"Menuiserie"},{"code":"06 40 00","desc":"Ébénisterie"},{"code":"06 83 16","desc":"Panneaux renforcés de fibre de verre"},{"code":"07 11 13","desc":"Hydrofuges bitumineux"},{"code":"07 12 13","desc":"Isolant en panneaux"},{"code":"07 21 16","desc":"Isolant en matelas"},{"code":"07 21 26","desc":"Isolants projetés - fibres cellulosiques"},{"code":"07 21 29","desc":"Isolant projeté (uréthane giclé)"},{"code":"07 24 00","desc":"Systèmes de revêtement des façades, avec enduit sur isolant"},{"code":"07 26 00","desc":"Pare-vapeur"},{"code":"07 31 13","desc":"Bardeaux d'asphalte"},{"code":"07 42 13","desc":"Profilés muraux métalliques"},{"code":"07 42 43","desc":"Panneaux composites pour façades"},{"code":"07 42 46","desc":"Panneaux muraux cimentaires (fibro-ciment)"},{"code":"07 46 16","desc":"Bardages en aluminium"},{"code":"07 46 19","desc":"Bardages en acier"},{"code":"07 46 23","desc":"Revêtements muraux extérieurs en bois"},{"code":"07 46 33","desc":"Revêtements muraux extérieurs en plastique"},{"code":"07 51 00","desc":"Couvertures à membrane bitumineuse multicouche"},{"code":"07 53 23","desc":"Couverture à membrane EPDM"},{"code":"07 55 63","desc":"Toitures végétalisées"},{"code":"07 61 00","desc":"Couvertures en feuilles métalliques"},{"code":"07 62 00","desc":"Solins et accessoires en tôle / gouttières"},{"code":"07 72 33","desc":"Trappes de toiture"},{"code":"07 81 00","desc":"Revêtements ignifuges appliqués par projection"},{"code":"07 84 00","desc":"Protection coupe-feu"},{"code":"07 99 00","desc":"Panneau architectural isolant"},{"code":"08 11 13","desc":"Portes et cadres en métal"},{"code":"08 11 16","desc":"Portes et cadres en aluminium"},{"code":"08 14 00","desc":"Portes et cadres en bois"},{"code":"08 31 00","desc":"Portes et panneaux de visite"},{"code":"08 33 00","desc":"Portes et grilles à enroulement vertical coupe-feu"},{"code":"08 33 13","desc":"Volets à enroulement, pour comptoirs"},{"code":"08 33 36","desc":"Grilles à enroulement latéral"},{"code":"08 35 13","desc":"Portes de garage"},{"code":"08 42 29","desc":"Portes d'entrée automatiques"},{"code":"08 44 13","desc":"Murs-rideaux vitrés à ossature d'aluminium"},{"code":"08 50 00","desc":"Fenêtres"},{"code":"08 71 00","desc":"Quincaillerie pour portes"},{"code":"08 80 00","desc":"Vitrages"},{"code":"08 90 00","desc":"Louvres et évents à lames (Persiennes architecturales)"},{"code":"09 21 16","desc":"Gypse et panneaux supports"},{"code":"09 22 16","desc":"Montants métalliques"},{"code":"09 23 00","desc":"Plâtrage"},{"code":"09 30 13","desc":"Carrelage de céramique"},{"code":"09 51 13","desc":"Éléments acoustiques pour plafonds"},{"code":"09 58 00","desc":"Plafonds suspendus"},{"code":"09 65 16","desc":"Revêtements de sol souples"},{"code":"09 68 13","desc":"Tapis-moquettes"},{"code":"09 91 13","desc":"Peinture - travaux extérieurs"},{"code":"09 91 23","desc":"Peinture - travaux intérieurs"},{"code":"10 14 00","desc":"Signalisation dans les bâtiments"},{"code":"10 14 53","desc":"Signalisation routière"},{"code":"10 21 13","desc":"Cloisons métalliques pour salles de toilettes"},{"code":"10 21 14","desc":"Cabines de toilettes à cloisons en plastique"},{"code":"10 21 16","desc":"Cabines de douche et d'habillage"},{"code":"10 22 13","desc":"Cloisons grillagées"},{"code":"10 22 19","desc":"Cloisons mobiles"},{"code":"10 26 00","desc":"Protecteurs de mur, de porte et de plancher"},{"code":"10 28 00","desc":"Accessoires de salle de toilette et de salle de bain"},{"code":"10 44 00","desc":"Matériel de protection incendie"},{"code":"10 51 13","desc":"Armoires-vestiaires métalliques"},{"code":"10 56 13","desc":"Rayonnage (Racking) industrielle métalliques"},{"code":"11 11 00","desc":"Matériel d'entretien des véhicules"},{"code":"11 13 13","desc":"Butoirs de quai de chargement"},{"code":"11 13 19","desc":"Niveleurs de quai"},{"code":"11 41 20","desc":"Congélateurs-chambres et réfrigérateurs-chambres"},{"code":"11 81 29","desc":"Protection contre les chutes dans les installations"},{"code":"11 82 26","desc":"Compaction des déchets"},{"code":"12 21 13","desc":"Stores à lames"},{"code":"12 24 13","desc":"Stores à enroulement automatique"},{"code":"12 50 00","desc":"Mobiliers"},{"code":"13 34 19","desc":"Système de construction en métal"},{"code":"13 34 23","desc":"Structures usinés"},{"code":"14 20 03","desc":"Monte-charge"},{"code":"14 20 06","desc":"Ascenseurs"},{"code":"21 05 00","desc":"Lutte contre les incendies - Exigences générales"},{"code":"21 13 13","desc":"Système d'extincteurs automatiques sous eau"},{"code":"21 13 16","desc":"Systèmes d'extincteurs automatiques sous air"},{"code":"21 30 00","desc":"Pompes d'incendie"},{"code":"22 05 00","desc":"Plomberie - Exigences générales"},{"code":"22 05 05","desc":"Démolition sélective de la plomberie"},{"code":"22 05 15","desc":"Plomberie - appareils spéciaux"},{"code":"22 07 19","desc":"Calorifuge pour tuyauterie de plomberie"},{"code":"22 10 10","desc":"Plomberie - pompes"},{"code":"22 11 16","desc":"Tuyauterie d'eau domestique & autres"},{"code":"22 13 16","desc":"Tuyauterie d'évacuation d'eaux usées et de ventilation en plastique"},{"code":"22 15 00","desc":"Réseaux d'air comprimé pour usage général"},{"code":"22 33 00","desc":"Chauffe-eau électriques"},{"code":"22 42 13","desc":"Bidets, urinoirs et w.-c. - Type commercial"},{"code":"22 42 16","desc":"Éviers et cuves - Type commercial"},{"code":"22 42 19","desc":"Douches et baignoires - Type commercial"},{"code":"22 47 00","desc":"Fontaines et refroidisseurs d'eau"},{"code":"23 05 00","desc":"Exigences générales concernant les travaux de CVCA"},{"code":"23 05 05","desc":"Démolition sélective des installation de chauffage, ventilation et conditionnement d'air (CVCA)"},{"code":"23 05 93","desc":"Essai, réglage et équilibrage de réseaux CVCA"},{"code":"23 07 13","desc":"Calorifuges pour conduits d'air"},{"code":"23 08 00","desc":"Mise en service CVCA"},{"code":"23 08 13","desc":"Contrôle de la performance des installations CVCA"},{"code":"23 08 16","desc":"Nettoyage et mise en route de la tuyauterie de CVCA"},{"code":"23 11 23","desc":"Tuyauterie de gaz naturel"},{"code":"23 23 00","desc":"Réseaux frigoriques"},{"code":"23 31 13","desc":"Conduits d'air métalliques"},{"code":"23 33 00","desc":"Systemes Frigorifiques"},{"code":"23 35 16","desc":"Systèmes d'évacuation des gaz d'échappement"},{"code":"23 37 20","desc":"Louvres, prises d'air et autres évents"},{"code":"23 38 13","desc":"Hottes de cuisine"},{"code":"23 82 16","desc":"Serpentins"},{"code":"23 82 23","desc":"Unités de ventilation"},{"code":"23 82 39","desc":"Aérothermes"},{"code":"23 84 13","desc":"Humidificateurs"},{"code":"25 00 00","desc":"Automatisation intégrée"},{"code":"26 05 00","desc":"Électricité - exigences générales"},{"code":"26 05 05","desc":"Démolition sélective de l'installation électrique"},{"code":"26 05 14","desc":"Câbles de transport d'énergie et conducteurs aériens"},{"code":"26 05 21","desc":"Fils & câbles"},{"code":"26 05 31","desc":"Armoires et boites de jonction, de tirage et de répartition"},{"code":"26 05 39","desc":"Canalisations sous plancher pour installations électriques"},{"code":"26 06 31","desc":"Groupes électrogènes à moteur diesel"},{"code":"26 08 00","desc":"Mise en service de l'installation électrique"},{"code":"26 12 19","desc":"Transformateurs sur socle"},{"code":"26 24 16","desc":"Panneaux de distribution"},{"code":"26 28 22","desc":"Interrupteurs-sectionneurs"},{"code":"26 29 01","desc":"Contacteurs"},{"code":"26 29 10","desc":"Démarreurs jusqu'à 600V"},{"code":"26 50 00","desc":"Éclairage"},{"code":"26 52 13","desc":"Éclairage de sécurité"},{"code":"26 52 14","desc":"Indicateurs lumineux de sortie"},{"code":"26 99 00","desc":"Entrée électrique"},{"code":"26 99 01","desc":"Chauffage"},{"code":"27 05 13","desc":"Télécommunications"},{"code":"27 51 16","desc":"Système de sonorisation"},{"code":"27 51 23","desc":"Systèmes d'intercom et de diffusion de programmes"},{"code":"28 10 00","desc":"Contrôle d'accès"},{"code":"28 23 00","desc":"Vidéosurveillance"},{"code":"28 31 00","desc":"Détection d'intrusion"},{"code":"28 46 00","desc":"Détection et alarme incendie"},{"code":"31 00 99","desc":"Terrassement - Travaux de petites envergures"},{"code":"31 11 00","desc":"Défrichement et essouchement"},{"code":"31 14 13","desc":"Décapage et mise en dépôt du sol"},{"code":"31 23 16","desc":"Excavation dans le roc"},{"code":"31 23 33","desc":"Excavation, creusage de tranchées et remblayage"},{"code":"31 62 16","desc":"Pieux tubulaires en acier"},{"code":"32 12 16","desc":"Revêtements de chaussée bitumineux"},{"code":"32 14 13","desc":"Revêtements en pavés de béton préfabriqué"},{"code":"32 16 00","desc":"Bordures, caniveaux et trottoirs"},{"code":"32 17 23","desc":"Marquage de chaussée"},{"code":"32 31 13","desc":"Clôtures grillagées et barrières"},{"code":"32 32 34","desc":"Murs de soutènement en sol renforcé"},{"code":"32 33 00","desc":"Mobilier extérieur"},{"code":"32 91 19","desc":"Mise en place de terre végétale et nivellement de finition"},{"code":"32 92 19","desc":"Ensemencement mécanique"},{"code":"32 92 20","desc":"Ensemencement hydraulique"},{"code":"32 92 23","desc":"Gazonnement"},{"code":"32 93 10","desc":"Plantation d'arbres, d'arbustes et couvre-sols végétaux"},{"code":"33","desc":"Services d'utilités"},{"code":"33 05 16","desc":"Regards de visite et bouches d'égout"},{"code":"33 14 16","desc":"Réseau de distribution d'eau"},{"code":"33 31 11","desc":"Réseau sanitaire"},{"code":"33 41 00","desc":"Réseau pluvial"},{"code":"33 46 13","desc":"Drainage des fondations et de dessous des dalles"},{"code":"33 71 73","desc":"Distribution électrique - branchements souterrains"},{"code":"34 71 13","desc":"Sécurité routière - glissière de béton"}],"all_metrics":["m²","m³","m.cu","Pi.lin","Pi.ca","Pi³","T","Kg","Un","Hre","Sem","Forfait","%","ml","m"]}
+</script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// COUCHE SHAREPOINT — WBS CG
+// Connexion à la liste SharePoint existante via REST API
+// ═══════════════════════════════════════════════════════════════
+
+// ── Configuration (à ajuster par l'administrateur) ──
+const SP_CONFIG = {
+  // Détecté automatiquement depuis l'URL — fonctionne en iframe SharePoint
+  siteUrl:     'https://constructiongauthier.sharepoint.com/teams/sp_projet',
+  listName:    'Liste des projets',
+  fieldNumero: '_x0023_projet',
+  fieldNom:    'Nomduprojet',
+  fieldWBS:    'WBSData',
+}
+
+// ── État de connexion SP ──
+let SP = {
+  connected: false,
+  currentProjectId: null,  // ID SharePoint (numérique) de l'item sélectionné
+  currentProjectNum: null,
+  currentProjectNom: null,
+  projects: [],
+  saving: false,
+  lastSaved: null,
+};
+
+// ── Digest token CSRF (requis pour écriture SP) ──
+async function getSPDigest() {
+  const resp = await fetch(`${SP_CONFIG.siteUrl}/_api/contextinfo`, {
+    method: 'POST',
+    headers: { 'Accept': 'application/json;odata=verbose', 'Content-Type': 'application/json;odata=verbose' },
+    credentials: 'include'
+  });
+  const data = await resp.json();
+  return data.d.GetContextWebInformation.FormDigestValue;
+}
+
+// ── Charger la liste de projets depuis SP ──
+async function spLoadProjects() {
+  setSPStatus('loading', 'Connexion à SharePoint…');
+  try {
+    const url = `${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.listName}')/items?` +
+      `$select=Id,${SP_CONFIG.fieldNumero},${SP_CONFIG.fieldNom},${SP_CONFIG.fieldWBS}` +
+      `&$orderby=${SP_CONFIG.fieldNumero} desc&$top=500`;
+    const resp = await fetch(url, { headers: { 'Accept': 'application/json;odata=verbose' }, credentials: 'include' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} — vérifiez le nom de la liste et les permissions`);
+    const data = await resp.json();
+    SP.projects = data.d.results.map(p => ({
+      id:     p.Id,
+      num:    p[SP_CONFIG.fieldNumero] || '',
+      nom:    p[SP_CONFIG.fieldNom]    || '',
+      hasWBS: !!(p[SP_CONFIG.fieldWBS] && p[SP_CONFIG.fieldWBS].length > 10),
+      wbsRaw: p[SP_CONFIG.fieldWBS]   || null,
+    }));
+    SP.connected = true;
+    setSPStatus('ok', `${SP.projects.length} projets chargés`);
+    renderProjectList();
+  } catch(e) {
+    SP.connected = false;
+    setSPStatus('error', 'Erreur : ' + e.message);
+  }
+}
+
+// ── Charger le WBS d'un projet spécifique ──
+async function spLoadProject(spId) {
+  const proj = SP.projects.find(p => p.id === spId);
+  if (!proj) return;
+  SP.currentProjectId  = spId;
+  SP.currentProjectNum = proj.num;
+  SP.currentProjectNom = proj.nom;
+  if (proj.wbsRaw) {
+    try {
+      const parsed = JSON.parse(proj.wbsRaw);
+      // Restore state exactly like loadLocal()
+      S.projName    = parsed.projName || proj.num + ' — ' + proj.nom;
+      S.phases      = { 1: !!parsed.phases?.['1'], 2: true, 3: !!parsed.phases?.['3'] };
+      S.secteurs    = parsed.secteurs  || [{code:'00', desc:'Global'}];
+      S.activeDiscs = new Set(parsed.activeDiscs || P06_DATA.disciplines.map(d => d.code));
+      S.lots        = (parsed.lots || []).map(l => ({ pct:0, qty:0, qtyReal:0, unit:'Forfait', note:'', ...l }));
+      S.mf          = parsed.mf || [];
+      lotMFSelected = new Set();
+      [1,3].forEach(n => { const t=$('ptab-'+n); if(t) t.className='ptab'+(S.phases[n]?' on':' off'); });
+      renderSecList(); renderDiscGrid(); renderLotPhaseSelect();
+      renderLotSecSelect(); renderLotDiscSelect(); renderWBSTree();
+      renderMFList(); updateStats();
+      updateSPBar();
+      toast('✓ WBS chargé — ' + proj.num + ' ' + proj.nom);
+    } catch(e) {
+      toast('⚠ Erreur lecture WBS : ' + e.message);
+    }
+  } else {
+    // Nouveau projet — reset
+    S = { projName: proj.num + ' — ' + proj.nom, phases:{1:true,2:true,3:true},
+      secteurs:[{code:'00',desc:'Global'}],
+      activeDiscs: new Set(P06_DATA.disciplines.map(d=>d.code)),
+      lots:[], mf:[] };
+    lotMFSelected = new Set();
+    [1,3].forEach(n => { const t=$('ptab-'+n); if(t) t.className='ptab on'; });
+    renderSecList(); renderDiscGrid(); renderLotPhaseSelect();
+    renderLotSecSelect(); renderLotDiscSelect(); renderWBSTree();
+    renderMFList(); updateStats();
+    updateSPBar();
+    toast('✓ Nouveau WBS initialisé — ' + proj.num + ' ' + proj.nom);
+  }
+  // Close project selector
+  $('sp-proj-modal').classList.remove('open');
+}
+
+// ── Sauvegarder le WBS du projet courant dans SP ──
+async function spSave() {
+  if (!SP.currentProjectId) { toast('⚠ Aucun projet sélectionné'); return; }
+  if (SP.saving) return;
+  SP.saving = true;
+  setSPSaveBtn('saving');
+  try {
+    const payload = {
+      projName:    S.projName,
+      phases:      { '1': !!S.phases[1], '2': true, '3': !!S.phases[3] },
+      secteurs:    S.secteurs,
+      activeDiscs: [...S.activeDiscs],
+      lots:        S.lots,
+      mf:          S.mf,
+      savedAt:     new Date().toISOString(),
+      savedBy:     _spPageContextInfo?.userLoginName || 'unknown',
+    };
+    const digest = await getSPDigest();
+    const url = `${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.listName}')/items(${SP.currentProjectId})`;
+    const body = JSON.stringify({ __metadata:{ type: await getSPListItemType() }, [SP_CONFIG.fieldWBS]: JSON.stringify(payload) });
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept':           'application/json;odata=verbose',
+        'Content-Type':     'application/json;odata=verbose',
+        'X-RequestDigest':  digest,
+        'X-HTTP-Method':    'MERGE',
+        'If-Match':         '*',
+      },
+      credentials: 'include',
+      body
+    });
+    if (!resp.ok && resp.status !== 204) throw new Error(`HTTP ${resp.status}`);
+    SP.lastSaved = new Date();
+    // Update local cache
+    const proj = SP.projects.find(p => p.id === SP.currentProjectId);
+    if (proj) { proj.hasWBS = true; proj.wbsRaw = JSON.stringify(payload); }
+    setSPSaveBtn('ok');
+    updateSPBar();
+    toast('✓ WBS sauvegardé dans SharePoint — ' + SP.currentProjectNum);
+  } catch(e) {
+    setSPSaveBtn('error');
+    toast('⚠ Erreur sauvegarde SP : ' + e.message);
+  }
+  SP.saving = false;
+}
+
+// ── Helper: list item entity type ──
+async function getSPListItemType() {
+  try {
+    const resp = await fetch(
+      `${SP_CONFIG.siteUrl}/_api/web/lists/getbytitle('${SP_CONFIG.listName}')?$select=ListItemEntityTypeFullName`,
+      { headers: { 'Accept': 'application/json;odata=verbose' }, credentials: 'include' }
+    );
+    const data = await resp.json();
+    return data.d.ListItemEntityTypeFullName;
+  } catch(e) { return 'SP.Data.ProjetsListItem'; }
+}
+
+// ── UI helpers ──
+function setSPStatus(state, msg) {
+  const el = $('sp-status');
+  if (!el) return;
+  const colors = { loading:'var(--amber)', ok:'var(--teal)', error:'var(--red)' };
+  const icons  = { loading:'⏳', ok:'🟢', error:'🔴' };
+  el.textContent = (icons[state]||'') + ' ' + msg;
+  el.style.color = colors[state] || 'var(--g5)';
+}
+
+function setSPSaveBtn(state) {
+  const btn = $('sp-save-btn');
+  if (!btn) return;
+  if (state === 'saving') { btn.textContent = '⏳ Sauvegarde…'; btn.disabled = true; }
+  else if (state === 'ok') { btn.textContent = '✓ Sauvegardé'; btn.disabled = false; setTimeout(()=>{ btn.textContent='💾 Sauvegarder SP'; }, 2500); }
+  else if (state === 'error') { btn.textContent = '⚠ Erreur SP'; btn.disabled = false; setTimeout(()=>{ btn.textContent='💾 Sauvegarder SP'; }, 3000); }
+}
+
+function updateSPBar() {
+  const bar = $('sp-project-bar');
+  if (!bar) return;
+  if (SP.currentProjectId) {
+    $('sp-proj-num').textContent  = SP.currentProjectNum;
+    $('sp-proj-nom').textContent  = SP.currentProjectNom;
+    $('sp-proj-saved').textContent = SP.lastSaved
+      ? 'Dernière sauvegarde : ' + SP.lastSaved.toLocaleTimeString('fr-CA')
+      : 'Non sauvegardé';
+    bar.style.display = 'flex';
+    $('sp-noproject-bar').style.display = 'none';
+  } else {
+    bar.style.display = 'none';
+    $('sp-noproject-bar').style.display = 'flex';
+  }
+}
+
+function renderProjectList() {
+  const el = $('sp-proj-list');
+  if (!el) return;
+  const q = ($('sp-proj-search')?.value || '').toLowerCase();
+  const filtered = SP.projects.filter(p =>
+    !q || p.num.toLowerCase().includes(q) || p.nom.toLowerCase().includes(q)
+  );
+  if (!filtered.length) {
+    el.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--g4);font-size:13px">Aucun projet trouvé</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(p => `
+    <div onclick="spLoadProject(${p.id})" style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+      border-bottom:1px solid var(--g2);cursor:pointer;transition:background .1s" 
+      onmouseover="this.style.background='var(--g1)'" onmouseout="this.style.background=''">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue)">${p.num}</span>
+          <span style="font-size:13px">${p.nom}</span>
+        </div>
+      </div>
+      ${p.hasWBS
+        ? '<span style="background:var(--teal-lt);color:var(--teal);border:1px solid var(--teal-md);border-radius:99px;padding:2px 8px;font-size:10px;font-weight:600">WBS ✓</span>'
+        : '<span style="background:var(--g2);color:var(--g4);border-radius:99px;padding:2px 8px;font-size:10px">Nouveau</span>'
+      }
+    </div>`).join('');
+}
+
+// ── Auto-save on lot changes (debounced) ──
+let autoSaveTimer = null;
+function triggerAutoSave() {
+  if (!SP.currentProjectId) return;
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => spSave(), 30000); // 30s after last change
+  // Update save button to show pending
+  const btn = $('sp-save-btn');
+  if (btn && !SP.saving) btn.textContent = '💾 Sauvegarder SP *';
+}
+
+// ── Init SP on page load ──
+async function initSP() {
+  // Détection SP par URL — fonctionne en iframe (pas d'accès à _spPageContextInfo)
+  const href = window.location.href;
+  const isOnSP = href.includes('sharepoint.com') || SP_CONFIG.siteUrl.includes('sharepoint.com');
+  if (isOnSP) {
+    await spLoadProjects();
+  } else {
+    // Mode local (test hors SP)
+    setSPStatus('error', 'Hors SharePoint — mode local actif');
+    const pb = $('sp-project-bar');
+    const nb = $('sp-noproject-bar');
+    const ob = $('sp-offline-bar');
+    if(pb) pb.style.display = 'none';
+    if(nb) nb.style.display = 'none';
+    if(ob) ob.style.display = 'flex';
+  }
+  updateSPBar();
+}
+
+</script>
+
+<script>
+
+// ── State ──
+let S = {
+  projName: 'Nouveau projet',
+  phases: {1:true, 2:true, 3:true},
+  secteurs: [{code:'00', desc:'Global'}],
+  activeDiscs: new Set(['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20']),
+  lots: [],   // {id, phase, sec, disc, num, desc, mfLinks:[]}
+  mf: []      // {code, desc, amount}
+};
+let modalLotId = null;
+let lotMFSelected = new Set(); // codes selected in lot creation form
+
+const PHASES = {1:'Préconstruction', 2:'Construction', 3:'Mise en service'};
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+
+// ── Toast ──
+function toast(msg){const t=$('toast');t.textContent=msg;t.className='toast show';clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',2800)}
+
+// ── Nav ──
+const VIEWS = ['phases','secteurs','discs','lots','import','mapping','review'];
+function goTo(name){
+  VIEWS.forEach(v=>{$('view-'+v).classList.toggle('hidden',v!==name);const n=$('nav-'+v);if(n)n.classList.toggle('on',v===name)});
+  if(name==='lots'){renderLotPhaseSelect();renderLotSecSelect();renderLotDiscSelect();renderWBSTree()}
+  if(name==='mapping'){renderMapping()}
+  if(name==='review'){renderReview()}
+  if(name==='secteurs'){renderSecList()}
+  if(name==='discs'){renderDiscGrid()}
+}
+
+// ── Stats ──
+function updateStats(){
+  try{
+    const lots=S.lots;
+    const totalLinks=lots.reduce((a,l)=>a+l.mfLinks.length,0);
+    const unmap=lots.filter(l=>!l.mfLinks.length).length;
+    const avgPct=lots.length?Math.round(lots.reduce((a,l)=>a+(l.pct||0),0)/lots.length):0;
+    $('s-sec').textContent=S.secteurs.length;
+    $('s-lots').textContent=lots.length;
+    $('s-pct').textContent=avgPct+'%';
+    $('s-pct').className='sc-v'+(avgPct>=100?' ok':avgPct>=50?' warn':'');
+    $('s-unmap').textContent=unmap;
+    $('nb-phases').textContent=Object.values(S.phases).filter(Boolean).length;
+    $('nb-sec').textContent=S.secteurs.length;
+    $('nb-disc').textContent=S.activeDiscs.size;
+    $('nb-lots').textContent=lots.length;
+    $('nb-mf').textContent=S.mf.length;
+    $('nb-links').textContent=totalLinks;
+    $('mf-cnt').textContent=S.mf.length;
+    $('hdr-name').textContent=S.projName;
+    let p=14;
+    if(S.secteurs.length>1)p=28;
+    if(S.activeDiscs.size>0)p=42;
+    if(lots.length>0)p=57;
+    if(S.mf.length>0)p=71;
+    if(totalLinks>0)p=85;
+    if(unmap===0&&lots.length>0)p=100;
+    $('prog-b').style.width=p+'%';
+  }catch(e){console.warn('updateStats:',e.message);}
+}
+
+// ── PHASE TOGGLE ──
+function togglePhase(num){
+  if(num===2) return;
+  S.phases[num]=!S.phases[num];
+  const t=$('ptab-'+num);
+  t.className='ptab'+(S.phases[num]?' on':' off');
+  updateStats();
+}
+
+// ── SECTEURS ──
+function renderSecList(){
+  const el=$('sec-list');
+  el.innerHTML = S.secteurs.map(s=>`
+    <div class="sec-chip ${s.code==='00'?'global':''}">
+      <code>${s.code}</code> ${s.desc}
+      ${s.code!=='00'?`<button onclick="deleteSec('${s.code}')" title="Supprimer">×</button>`:''}
+    </div>`).join('');
+}
+function addSecteur(){
+  const desc=$('sec-desc').value.trim();
+  if(!desc){toast('⚠ Entrez une description');return}
+  const nums=S.secteurs.filter(s=>s.code!=='00').map(s=>parseInt(s.code));
+  const next=nums.length>0?Math.max(...nums)+1:1;
+  const code=pad(next);
+  if(S.secteurs.find(s=>s.code===code)){toast('⚠ Code secteur déjà existant');return}
+  S.secteurs.push({code,desc});
+  $('sec-desc').value='';
+  renderSecList();updateStats();
+  toast('✓ Secteur '+code+' ajouté');
+}
+function deleteSec(code){
+  if(S.lots.find(l=>l.sec===code)){toast('⚠ Des lots utilisent ce secteur — supprimez-les d\'abord');return}
+  S.secteurs=S.secteurs.filter(s=>s.code!==code);
+  renderSecList();updateStats();
+}
+
+// ── DISCIPLINES ──
+function renderDiscGrid(){
+  const el=$('disc-grid');
+  el.innerHTML=P06_DATA.disciplines.map(d=>{
+    const on=S.activeDiscs.has(d.code);
+    return `<div class="disc-item ${on?'on':''}" onclick="toggleDisc('${d.code}',this)">
+      <div class="disc-cb">${on?'✓':''}</div>
+      <span class="disc-code">${d.code}</span>
+      <span class="disc-desc">${d.desc}</span>
+    </div>`;
+  }).join('');
+}
+function toggleDisc(code,el){
+  if(S.activeDiscs.has(code)){S.activeDiscs.delete(code);el.classList.remove('on');el.querySelector('.disc-cb').textContent=''}
+  else{S.activeDiscs.add(code);el.classList.add('on');el.querySelector('.disc-cb').textContent='✓'}
+  updateStats();
+}
+function selAllDisc(){S.activeDiscs=new Set(P06_DATA.disciplines.map(d=>d.code));renderDiscGrid();updateStats()}
+function deselAllDisc(){S.activeDiscs=new Set();renderDiscGrid();updateStats()}
+
+// ── LOT FORM ──
+function renderLotPhaseSelect(){
+  const sel=$('lot-phase');
+  sel.innerHTML=Object.entries(PHASES).filter(([k])=>S.phases[parseInt(k)]).map(([k,v])=>`<option value="${k}" ${k==='2'?'selected':''}>${k} — ${v}</option>`).join('');
+  updateLotPreview();
+}
+function renderLotSecSelect(){
+  const sel=$('lot-sec');
+  const prev=sel.value;
+  sel.innerHTML=S.secteurs.map(s=>`<option value="${s.code}">${s.code} — ${s.desc}</option>`).join('');
+  if(prev) sel.value=prev;
+  updateLotPreview();
+}
+function renderLotDiscSelect(){
+  const sel=$('lot-disc');
+  const prev=sel.value;
+  sel.innerHTML=P06_DATA.disciplines.filter(d=>S.activeDiscs.has(d.code)).map(d=>`<option value="${d.code}">${d.code} — ${d.desc}</option>`).join('');
+  if(prev) sel.value=prev;
+  populateUnitSelect('lot-unit', sel.value);
+  suggestMF();
+  updateLotPreview();
+}
+function onDiscChange(){
+  const disc=$('lot-disc').value;
+  populateUnitSelect('lot-unit', disc);
+  suggestMF();
+  updateLotPreview();
+}
+function updateLotPreview(){
+  const ph=$('lot-phase').value;
+  const sec=$('lot-sec').value;
+  const disc=$('lot-disc').value;
+  const num=pad(parseInt($('lot-num').value)||1);
+  if(ph&&sec&&disc) $('lot-prev').textContent=`${ph}.${sec}.${disc}.${num}`;
+  else $('lot-prev').textContent='—';
+}
+function autoLotNum(){
+  const ph=$('lot-phase').value;
+  const sec=$('lot-sec').value;
+  const disc=$('lot-disc').value;
+  const existing=S.lots.filter(l=>l.phase===ph&&l.sec===sec&&l.disc===disc);
+  $('lot-num').value=existing.length+1;
+  updateLotPreview();
+}
+
+// ── MF SUGGESTIONS for lot form ──
+function suggestMF(){
+  const disc=$('lot-disc').value;
+  const el=$('mf-suggest-chips');
+  const suggs=(P06_DATA.mf_suggestions[disc]||[]);
+  if(!suggs.length){el.innerHTML='<span style="font-size:12px;color:var(--g4)">Aucune suggestion pour cette discipline.</span>';return}
+  // show available (imported) first, then grayed if not imported
+  el.innerHTML=suggs.map(code=>{
+    const mf=S.mf.find(m=>m.code===code);
+    const sel=lotMFSelected.has(code);
+    const avail=!!mf;
+    return `<span onclick="toggleLotMF('${code}')" style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:99px;font-size:11px;font-family:var(--mono);font-weight:600;border:1px solid;cursor:pointer;
+      background:${sel?'var(--teal)':avail?'var(--teal-lt)':'var(--g2)'};
+      color:${sel?'#fff':avail?'var(--teal)':'var(--g4)'};
+      border-color:${sel?'var(--teal)':avail?'var(--teal-md)':'var(--g3)'}"
+      title="${mf?mf.desc:'Non importé — importez d\'abord vos codes MF'}">${sel?'✓ ':''} ${code}</span>`;
+  }).join('');
+}
+function toggleLotMF(code){
+  const mf=S.mf.find(m=>m.code===code);
+  if(!mf){toast('⚠ Importez d\'abord ce code MF (étape Import MF)');return}
+  if(lotMFSelected.has(code)) lotMFSelected.delete(code);
+  else lotMFSelected.add(code);
+  suggestMF();
+}
+
+function populateUnitSelect(selId, discCode){
+  const disc=P06_DATA.disciplines.find(d=>d.code===discCode);
+  const opts=disc?disc.metric_opts:P06_DATA.all_metrics;
+  const all=P06_DATA.all_metrics;
+  const sel=$(selId);
+  if(!sel) return;
+  sel.innerHTML=all.map(m=>`<option value="${m}" ${opts&&opts[0]===m?'selected':''}>${m}</option>`).join('');
+  if(opts&&opts[0]) sel.value=opts[0];
+}
+
+function addLot(){
+  const ph=$('lot-phase').value;
+  const sec=$('lot-sec').value;
+  const disc=$('lot-disc').value;
+  const num=parseInt($('lot-num').value)||1;
+  const desc=$('lot-desc').value.trim();
+  const qty=parseFloat($('lot-qty').value)||0;
+  const unit=$('lot-unit').value||'Forfait';
+  if(!desc){toast('⚠ Entrez une description de lot');return}
+  if(!ph||!sec||!disc){toast('⚠ Sélectionnez phase, secteur et discipline');return}
+  const code=`${ph}.${sec}.${disc}.${pad(num)}`;
+  if(S.lots.find(l=>l.code===code)){toast('⚠ Code lot déjà existant : '+code);return}
+  const mfLinks=[...lotMFSelected];
+  S.lots.push({id:'lot_'+Date.now(), code, phase:ph, sec, disc, num:pad(num), desc, qty, unit, pct:0, qtyReal:0, note:'', mfLinks});
+  S.lots.sort((a,b)=>a.code.localeCompare(b.code));
+  $('lot-desc').value='';
+  $('lot-qty').value='';
+  lotMFSelected=new Set();
+  autoLotNum();
+  suggestMF();
+  renderWBSTree();
+  updateStats();
+  toast('✓ Lot '+code+' ajouté');
+  triggerAutoSave();
+}
+
+function deleteLot(id){
+  S.lots=S.lots.filter(l=>l.id!==id);
+  renderWBSTree();updateStats();
+}
+function removeLotMF(lotId,mfCode){
+  const l=S.lots.find(l=>l.id===lotId);
+  if(l) l.mfLinks=l.mfLinks.filter(c=>c!==mfCode);
+  renderWBSTree();updateStats();
+}
+
+// ── WBS TREE ──
+function buildTree(){
+  // Build pseudo-hierarchy: Phase > Secteur > Discipline > Lot
+  const nodes=[];
+  const activePh=Object.entries(S.phases).filter(([,v])=>v).map(([k])=>k);
+  activePh.forEach(ph=>{
+    // only show phases that have lots
+    const phLots=S.lots.filter(l=>l.phase===ph);
+    if(!phLots.length) return;
+    nodes.push({type:'phase',code:ph,desc:PHASES[ph]||'Phase '+ph});
+    // secteurs used in this phase
+    const secs=[...new Set(phLots.map(l=>l.sec))].sort();
+    secs.forEach(sec=>{
+      const secObj=S.secteurs.find(s=>s.code===sec);
+      const secLots=phLots.filter(l=>l.sec===sec);
+      nodes.push({type:'sec',code:`${ph}.${sec}`,desc:(secObj?secObj.desc:'Secteur '+sec)});
+      // disciplines used in this sec
+      const discs=[...new Set(secLots.map(l=>l.disc))].sort((a,b)=>parseInt(a)-parseInt(b));
+      discs.forEach(disc=>{
+        const discObj=P06_DATA.disciplines.find(d=>d.code===disc);
+        const discLots=secLots.filter(l=>l.disc===disc);
+        nodes.push({type:'disc',code:`${ph}.${sec}.${disc}`,desc:(discObj?disc+' — '+discObj.desc:'Discipline '+disc)});
+        discLots.forEach(lot=>{
+          nodes.push({type:'lot',...lot});
+        });
+      });
+    });
+  });
+  return nodes;
+}
+
+function renderWBSTree(){
+  const el=$('wbs-tree');
+  const nodes=buildTree();
+  if(!nodes.length){el.innerHTML='<div class="empty">Aucun lot créé — utilisez le formulaire ci-dessus.</div>';return}
+  el.innerHTML=nodes.map(n=>{
+    if(n.type==='phase') return `<div class="wn l1"><div class="wn-head" style="cursor:default"><span class="wn-code">${n.code}</span><span class="wn-desc" style="font-weight:600">${n.desc}</span><span class="badge b-blue" style="font-size:10px">Phase</span></div></div>`;
+    if(n.type==='sec')  return `<div class="wn l2"><div class="wn-head" style="cursor:default"><span class="wn-code">${n.code}</span><span class="wn-desc" style="font-weight:500">${n.desc}</span><span class="badge b-teal" style="font-size:10px">Secteur</span></div></div>`;
+    if(n.type==='disc') return `<div class="wn l3"><div class="wn-head" style="cursor:default"><span class="wn-code">${n.code}</span><span class="wn-desc">${n.desc}</span><span class="badge" style="background:#FFF8E1;color:#7A5C00;font-size:10px">Discipline</span></div></div>`;
+    // lot
+    const chips=n.mfLinks.map(c=>`<span class="chip chip-mf">${c}<button onclick="removeLotMF('${n.id}','${c}')">×</button></span>`).join('');
+    return `<div class="wn l4">
+      <div class="wn-head">
+        <span class="wn-code">${n.code}</span>
+        <span class="wn-desc">${n.desc}</span>
+        <span class="badge b-purple" style="font-size:10px">Lot</span>
+        ${n.qty?`<span class="badge b-gray" style="font-size:10px">${n.qty} ${n.unit}</span>`:''}
+        ${!n.mfLinks.length?'<span class="chip-nomap badge" style="font-size:10px">⚠ Non mappé</span>':''}
+        <div class="wn-acts">
+          <button class="btn sm" onclick="openAvancement('${n.id}')" title="Mettre à jour l'avancement" style="background:var(--teal-lt);border-color:var(--teal-md);color:var(--teal)">${n.pct||0}%</button>
+          <button class="btn sm" onclick="openModal('${n.id}')">+ MF</button>
+          <button class="btn sm bd" onclick="deleteLot('${n.id}')">✕</button>
+        </div>
+      </div>
+      ${chips?`<div class="wn-body">${chips}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── MF IMPORT ──
+function importMF(){
+  const raw=$('mf-paste').value.trim();
+  if(!raw){toast('⚠ Collez vos données d\'abord');return}
+  let added=0;
+  raw.split('\n').filter(l=>l.trim()).forEach(line=>{
+    const p=line.split(/\t|;/).map(s=>s.trim());
+    const code=p[0];if(!code) return;
+    const desc=p[1]||'';const amt=p[2]?parseFloat(p[2].replace(/[^\d.]/g,'')):null;
+    if(!S.mf.find(m=>m.code===code)){S.mf.push({code,desc,amount:amt});added++}
+  });
+  renderMFList();updateStats();suggestMF();
+  toast('✓ '+added+' code(s) importé(s)');
+}
+function loadDDNBaseline(){
+  let added=0;
+  P06_DATA.all_mf.forEach(m=>{
+    if(!S.mf.find(x=>x.code===m.code)){S.mf.push({code:m.code,desc:m.desc,amount:null});added++}
+  });
+  renderMFList();updateStats();suggestMF();
+  toast('✓ '+added+' codes DDN Gauthier chargés');
+}
+function clearMF(){
+  if(!confirm('Effacer tous les codes MF et leurs liens ?')) return;
+  S.mf=[];S.lots.forEach(l=>l.mfLinks=[]);
+  renderMFList();renderWBSTree();updateStats();suggestMF();
+}
+function deleteMF(code){
+  S.mf=S.mf.filter(m=>m.code!==code);
+  S.lots.forEach(l=>l.mfLinks=l.mfLinks.filter(c=>c!==code));
+  renderMFList();renderWBSTree();updateStats();
+}
+function renderMFList(){
+  const el=$('mf-list');
+  const q=($('mf-srch').value||'').toLowerCase();
+  const f=S.mf.filter(m=>!q||m.code.toLowerCase().includes(q)||m.desc.toLowerCase().includes(q));
+  if(!f.length){el.innerHTML='<div class="empty">Aucun code importé.</div>';return}
+  el.innerHTML=`<table class="tbl"><thead><tr><th>Code MF</th><th>Description</th><th style="text-align:right">Montant ($)</th><th></th></tr></thead><tbody>
+    ${f.map(m=>`<tr><td><code>${m.code}</code></td><td>${m.desc||'—'}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums">${m.amount!=null?m.amount.toLocaleString('fr-CA'):'—'}</td>
+      <td><button class="btn sm bd" onclick="deleteMF('${m.code}')">✕</button></td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+// ── AUTO MAPPING ──
+function autoMap(){
+  if(!S.mf.length){toast('⚠ Importez d\'abord les codes MF');return}
+  let linked=0;
+  S.lots.forEach(lot=>{
+    const suggs=P06_DATA.mf_suggestions[lot.disc]||[];
+    suggs.forEach(code=>{
+      const mf=S.mf.find(m=>m.code===code);
+      if(mf&&!lot.mfLinks.includes(code)){lot.mfLinks.push(code);linked++}
+    });
+  });
+  renderMapping();renderWBSTree();updateStats();
+  toast('✓ '+linked+' lien(s) créé(s) automatiquement');
+}
+
+// ── MAPPING VIEW ──
+function renderMapping(){
+  const el=$('map-body');
+  const lots=S.lots;
+  if(!lots.length||!S.mf.length){el.innerHTML='<div class="empty">Créez des lots L4 et importez les codes MF d\'abord.</div>';return}
+  const nodes=buildTree();
+  el.innerHTML=nodes.map(n=>{
+    if(n.type==='phase') return `<div class="wn l1" style="margin-bottom:4px"><div class="wn-head" style="cursor:default"><span class="wn-code">${n.code}</span><span class="wn-desc" style="font-weight:600">${n.desc}</span><span class="badge b-blue" style="font-size:10px">Phase</span></div></div>`;
+    if(n.type==='sec')  return `<div class="wn l2" style="margin-bottom:4px"><div class="wn-head" style="cursor:default"><span class="wn-code">${n.code}</span><span class="wn-desc" style="font-weight:500">${n.desc}</span><span class="badge b-teal" style="font-size:10px">Secteur</span></div></div>`;
+    if(n.type==='disc') return `<div class="wn l3" style="margin-bottom:4px"><div class="wn-head" style="cursor:default"><span class="wn-code">${n.code}</span><span class="wn-desc">${n.desc}</span></div></div>`;
+    const chips=n.mfLinks.map(c=>{const mf=S.mf.find(m=>m.code===c);return `<span class="chip chip-mf">${c}${mf&&mf.desc?' — '+mf.desc:''}<button onclick="removeLotMF('${n.id}','${c}')">×</button></span>`}).join('');
+    const st=n.mfLinks.length?`<span class="badge b-teal">Mappé (${n.mfLinks.length})</span>`:`<span class="badge b-amber">⚠ Non mappé</span>`;
+    return `<div class="wn l4" style="margin-bottom:4px">
+      <div class="wn-head"><span class="wn-code">${n.code}</span><span class="wn-desc">${n.desc}</span>${st}
+        <div class="wn-acts"><button class="btn sm bp" onclick="openModal('${n.id}')">+ MF</button></div>
+      </div>
+      ${chips?`<div class="wn-body">${chips}</div>`:'<div style="padding:4px 12px 8px;font-size:11px;color:var(--g4)">Aucun code MF associé — cliquez + MF ou utilisez le mapping automatique.</div>'}
+    </div>`;
+  }).join('');
+}
+
+// ── MODAL ──
+function openModal(lotId){
+  if(!S.mf.length){toast('⚠ Importez d\'abord les codes MF');return}
+  const lot=S.lots.find(l=>l.id===lotId);if(!lot) return;
+  modalLotId=lotId;
+  $('modal-lot-code').textContent=lot.code;
+  $('modal-lot-desc').textContent=lot.desc;
+  $('modal-srch').value='';
+  renderModalMF();
+  $('mf-modal').classList.add('open');
+}
+function renderModalMF(){
+  const lot=S.lots.find(l=>l.id===modalLotId);if(!lot) return;
+  const q=($('modal-srch').value||'').toLowerCase();
+  // show suggested first, then rest
+  const disc=lot.disc;
+  const suggs=new Set(P06_DATA.mf_suggestions[disc]||[]);
+  const sorted=[...S.mf].sort((a,b)=>{
+    const as=suggs.has(a.code),bs=suggs.has(b.code);
+    if(as&&!bs) return -1; if(!as&&bs) return 1; return a.code.localeCompare(b.code);
+  });
+  const filtered=sorted.filter(m=>!q||m.code.toLowerCase().includes(q)||m.desc.toLowerCase().includes(q));
+  $('modal-mf-items').innerHTML=filtered.map(m=>{
+    const sel=lot.mfLinks.includes(m.code);
+    const isSugg=suggs.has(m.code);
+    return `<div class="mf-row ${sel?'sel':''}" onclick="toggleModalMF('${m.code}',this)">
+      <div class="mf-cb">${sel?'✓':''}</div>
+      <code style="min-width:90px">${m.code}</code>
+      <span style="font-size:12px;color:var(--g5);flex:1">${m.desc||''}</span>
+      ${isSugg?`<span class="badge b-teal" style="font-size:9px">Suggéré</span>`:''}
+      ${m.amount!=null?`<span style="font-size:11px;color:var(--g4)">${m.amount.toLocaleString('fr-CA')} $</span>`:''}
+    </div>`;
+  }).join('');
+}
+function toggleModalMF(code,el){
+  const lot=S.lots.find(l=>l.id===modalLotId);if(!lot) return;
+  if(lot.mfLinks.includes(code)){lot.mfLinks=lot.mfLinks.filter(c=>c!==code);el.classList.remove('sel');el.querySelector('.mf-cb').textContent=''}
+  else{lot.mfLinks.push(code);el.classList.add('sel');el.querySelector('.mf-cb').textContent='✓'}
+  renderWBSTree();updateStats();
+}
+function closeModal(){$('mf-modal').classList.remove('open');modalLotId=null;renderMapping()}
+$('mf-modal').addEventListener('click',e=>{if(e.target===$('mf-modal'))closeModal()});
+
+// ── REVIEW ──
+function renderReview(){
+  const el=$('review-body');
+  const lots=S.lots;
+  if(!lots.length){el.innerHTML='<div class="empty">Aucune donnée.</div>';return}
+  const totalLinks=lots.reduce((a,l)=>a+l.mfLinks.length,0);
+  const unmap=lots.filter(l=>!l.mfLinks.length).length;
+  el.innerHTML=`<div style="padding:10px 14px;border-bottom:1px solid var(--g2);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <span style="font-weight:700">${S.projName}</span>
+    ${unmap?`<span class="badge b-amber">⚠ ${unmap} lot(s) non mappé(s)</span>`:'<span class="badge b-teal">✓ Mapping complet</span>'}
+    <span class="badge b-blue">${lots.length} lots · ${totalLinks} liens MF</span>
+  </div>
+  <table class="tbl">
+    <thead><tr><th>Code WBS</th><th>Description</th><th>Discipline</th><th style="text-align:right">Qté prévue</th><th style="text-align:right">Qté réalisée</th><th style="text-align:center">Avancement</th><th>Codes Masterformat</th><th style="text-align:right">Montant estimé</th></tr></thead>
+    <tbody>${lots.map(lot=>{
+      const discObj=P06_DATA.disciplines.find(d=>d.code===lot.disc);
+      const mfD=lot.mfLinks.map(c=>{const m=S.mf.find(x=>x.code===c);return `<span class="chip chip-mf" style="margin:1px">${c}${m&&m.desc?'<span style="font-family:var(--font);font-weight:400"> '+m.desc+'</span>':''}</span>`}).join('');
+      const tot=lot.mfLinks.reduce((s,c)=>{const m=S.mf.find(x=>x.code===c);return s+(m&&m.amount?m.amount:0)},0);
+      const pct=lot.pct||0;
+      const pctColor=pct>=100?'var(--teal)':pct>=50?'#E3A900':'var(--blue)';
+      return `<tr>
+        <td><code>${lot.code}</code></td>
+        <td>${lot.desc}</td>
+        <td><span class="badge b-gray" style="font-size:10px">${lot.disc}${discObj?' — '+discObj.desc:''}</span></td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${lot.qty>0?lot.qty+' '+lot.unit:'—'}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${lot.qtyReal>0?lot.qtyReal+' '+(lot.unit||''):'—'}</td>
+        <td style="text-align:center;min-width:120px">
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="flex:1;height:6px;background:var(--g2);border-radius:99px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${pctColor};border-radius:99px"></div></div>
+            <span style="font-size:12px;font-weight:700;color:${pctColor};min-width:32px">${pct}%</span>
+          </div>
+        </td>
+        <td>${mfD||'<span style="color:var(--g4)">—</span>'}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums;font-size:12px">${tot>0?tot.toLocaleString('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}):'—'}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+}
+
+
+// ── AVANCEMENT ──
+let avLotId = null;
+
+function openAvancement(lotId){
+  const lot=S.lots.find(l=>l.id===lotId); if(!lot) return;
+  avLotId=lotId;
+  $('av-lot-code').textContent=lot.code;
+  $('av-lot-desc').textContent=lot.desc;
+  $('av-qty-prev').value=lot.qty||0;
+  $('av-qty-real').value=lot.qtyReal||0;
+  populateUnitSelect('av-unit-sel', lot.disc);
+  $('av-unit-sel').value=lot.unit||'Forfait';
+  const pct=lot.pct||0;
+  $('av-pct-slider').value=pct;
+  $('av-pct-input').value=pct;
+  $('av-progress-fill').style.width=pct+'%';
+  $('av-progress-fill').style.background=pct>=100?'var(--teal)':pct>=50?'#E3A900':'var(--blue)';
+  $('av-note').value=lot.note||'';
+  calcAvPct();
+  $('av-modal').classList.add('open');
+}
+
+function calcAvPct(){
+  const prev=parseFloat($('av-qty-prev').value)||0;
+  const real=parseFloat($('av-qty-real').value)||0;
+  if(prev>0){
+    const pct=Math.min(100,Math.round((real/prev)*100));
+    $('av-pct-calc').textContent=pct+'%';
+    $('av-pct-slider').value=pct;
+    $('av-pct-input').value=pct;
+    $('av-progress-fill').style.width=pct+'%';
+    $('av-progress-fill').style.background=pct>=100?'var(--teal)':pct>=50?'#E3A900':'var(--blue)';
+  } else {
+    $('av-pct-calc').textContent='—';
+  }
+}
+
+function syncSlider(val){
+  const v=Math.min(100,Math.max(0,parseInt(val)||0));
+  $('av-pct-slider').value=v;
+  $('av-pct-input').value=v;
+  $('av-progress-fill').style.width=v+'%';
+  $('av-progress-fill').style.background=v>=100?'var(--teal)':v>=50?'#E3A900':'var(--blue)';
+}
+
+function saveAvancement(){
+  const lot=S.lots.find(l=>l.id===avLotId); if(!lot) return;
+  lot.qty=parseFloat($('av-qty-prev').value)||0;
+  lot.qtyReal=parseFloat($('av-qty-real').value)||0;
+  lot.unit=$('av-unit-sel').value;
+  lot.pct=parseInt($('av-pct-input').value)||0;
+  lot.note=$('av-note').value.trim();
+  closeAvModal();
+  renderWBSTree();
+  renderMapping();
+  updateStats();
+  toast('✓ Avancement mis à jour : '+lot.code+' → '+lot.pct+'%');
+  triggerAutoSave();
+}
+
+function closeAvModal(){$('av-modal').classList.remove('open');avLotId=null;}
+$('av-modal').addEventListener('click',e=>{if(e.target===$('av-modal'))closeAvModal();});
+
+// ── RENAME ──
+function renameProj(){const n=prompt('Nom du projet :',S.projName);if(n&&n.trim()){S.projName=n.trim();updateStats()}}
+
+// ── SAVE / LOAD ──
+function saveLocal(){
+  try{
+    // Serialize: convert Set to Array, ensure phase keys are strings
+    const d={
+      projName: S.projName,
+      phases: {
+        "1": !!S.phases[1], 
+        "2": true,
+        "3": !!S.phases[3]
+      },
+      secteurs: S.secteurs,
+      activeDiscs: [...S.activeDiscs],
+      lots: S.lots,
+      mf: S.mf
+    };
+    localStorage.setItem('wbs_cg_p06', JSON.stringify(d));
+    toast('✓ Sauvegardé dans le navigateur');
+  }catch(e){toast('⚠ Erreur de sauvegarde : '+e.message)}
+}
+
+function loadLocal(){
+  try{
+    const raw=localStorage.getItem('wbs_cg_p06');
+    if(!raw){toast('Aucune sauvegarde trouvée');return}
+    const parsed=JSON.parse(raw);
+
+    // Restore state — normalize phase keys back to integers
+    S.projName   = parsed.projName || 'Nouveau projet';
+    S.phases     = {1:!!parsed.phases['1'], 2:true, 3:!!parsed.phases['3']};
+    S.secteurs   = parsed.secteurs || [{code:'00',desc:'Global'}];
+    S.activeDiscs= new Set(parsed.activeDiscs || []);
+    S.lots       = (parsed.lots || []).map(l=>({
+      pct:0, qty:0, qtyReal:0, unit:'Forfait', note:'', ...l
+    }));
+    S.mf         = parsed.mf || [];
+    lotMFSelected= new Set();
+
+    // Restore UI state
+    // Phase tabs
+    [1,3].forEach(n=>{
+      const t=$('ptab-'+n);
+      if(t) t.className='ptab'+(S.phases[n]?' on':' off');
+    });
+    // Re-render all views
+    renderSecList();
+    renderDiscGrid();
+    renderLotPhaseSelect();
+    renderLotSecSelect();
+    renderLotDiscSelect();
+    renderWBSTree();
+    renderMFList();
+    updateStats();
+    toast('✓ Données chargées — '+S.lots.length+' lot(s), '+S.mf.length+' code(s) MF');
+  }catch(e){toast('⚠ Erreur de chargement : '+e.message)}
+}
+
+function resetAll(){
+  if(!confirm('Réinitialiser complètement ? Toutes les données seront perdues.')) return;
+  S={
+    projName:'Nouveau projet',
+    phases:{1:true,2:true,3:true},
+    secteurs:[{code:'00',desc:'Global'}],
+    activeDiscs:new Set(P06_DATA.disciplines.map(d=>d.code)),
+    lots:[],
+    mf:[]
+  };
+  lotMFSelected=new Set();
+  // Reset phase tabs
+  [1,3].forEach(n=>{const t=$('ptab-'+n);if(t) t.className='ptab on';});
+  renderSecList();
+  renderDiscGrid();
+  renderLotPhaseSelect();
+  renderLotSecSelect();
+  renderLotDiscSelect();
+  renderWBSTree();
+  renderMFList();
+  updateStats();
+  toast('✓ Réinitialisé');
+}
+
+// ── EXPORT EXCEL ──
+function doExportExcel(){
+  if(!S.lots.length){toast('⚠ Aucune donnée');return}
+  const wb=XLSX.utils.book_new();
+  const rows=[
+    ['Projet',S.projName],['Date',new Date().toLocaleDateString('fr-CA')],['Annexe','P-06 — Guide WBS Construction Gauthier'],[],
+    ['Code WBS','Phase','Secteur','Discipline','Description lot','Qté prévue','Unité','Qté réalisée','% Avancement','Codes Masterformat','Descriptions MF','Montant estimé ($)','Note chantier']
+  ];
+  S.lots.forEach(lot=>{
+    const discObj=P06_DATA.disciplines.find(d=>d.code===lot.disc);
+    const secObj=S.secteurs.find(s=>s.code===lot.sec);
+    const mfC=lot.mfLinks.join(', ');
+    const mfD=lot.mfLinks.map(c=>{const m=S.mf.find(x=>x.code===c);return m?m.desc:''}).join(', ');
+    const tot=lot.mfLinks.reduce((s,c)=>{const m=S.mf.find(x=>x.code===c);return s+(m&&m.amount?m.amount:0)},0);
+    rows.push([lot.code,PHASES[lot.phase]||lot.phase,secObj?secObj.desc:'Secteur '+lot.sec,discObj?lot.disc+' — '+discObj.desc:'Discipline '+lot.disc,lot.desc,lot.qty||0,lot.unit||'',lot.qtyReal||0,lot.pct||0,mfC,mfD,tot||'',lot.note||'']);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:18},{wch:16},{wch:14},{wch:22},{wch:40},{wch:10},{wch:10},{wch:12},{wch:12},{wch:28},{wch:45},{wch:18},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws,'WBS P-06');
+  if(S.mf.length){
+    const mfR=[['Code Masterformat','Description','Montant ($)']];
+    S.mf.forEach(m=>mfR.push([m.code,m.desc,m.amount||'']));
+    const ws2=XLSX.utils.aoa_to_sheet(mfR);ws2['!cols']=[{wch:20},{wch:50},{wch:15}];
+    XLSX.utils.book_append_sheet(wb,ws2,'Codes Masterformat');
+  }
+  const fn=(S.projName.replace(/[^a-zA-Z0-9À-ÿ \-]/g,'')+'_WBS_P06_'+new Date().toISOString().slice(0,10)+'.xlsx').replace(/\s+/g,'_');
+  XLSX.writeFile(wb,fn);toast('✓ Excel téléchargé');
+}
+
+// ── EXPORT CSV ──
+function doExportCSV(){
+  if(!S.lots.length){toast('⚠ Aucune donnée');return}
+  let csv='Code WBS;Description;Discipline;Codes Masterformat;Statut\n';
+  S.lots.forEach(l=>{
+    const d=P06_DATA.disciplines.find(x=>x.code===l.disc);
+    csv+=`${l.code};"${l.desc}";${l.disc}${d?' — '+d.desc:''};"${l.mfLinks.join(', ')}";${l.mfLinks.length?'Mappé':'En attente'}\n`;
+  });
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=(S.projName+'_WBS_P06_'+new Date().toISOString().slice(0,10)+'.csv').replace(/\s+/g,'_');
+  a.click();toast('✓ CSV téléchargé');
+}
+
+// ── INIT ──
+renderSecList();
+renderDiscGrid();
+updateStats();
+
+</script>
+
+<script>
+// Override saveLocal pour mode SP
+const _origSaveLocal = saveLocal;
+function saveLocal(){
+  if (SP.currentProjectId){ spSave(); return; }
+  _origSaveLocal();
+}
+
+// Init global
+document.addEventListener('DOMContentLoaded', async function(){
+  renderSecList();
+  renderDiscGrid();
+  updateStats();
+  await initSP();
+  if (SP.connected && !SP.currentProjectId){
+    document.getElementById('sp-proj-modal').classList.add('open');
+  }
+});
+
+document.getElementById('sp-proj-modal').addEventListener('click', function(e){
+  if (e.target === document.getElementById('sp-proj-modal'))
+    document.getElementById('sp-proj-modal').classList.remove('open');
+});
+</script>
+
+</body>
+</html>
