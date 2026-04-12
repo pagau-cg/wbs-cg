@@ -1,18 +1,8 @@
 {
   "routes": [
     {
-      "route": "/api/*",
-      "allowedRoles": ["reader"]
-    },
-    {
       "route": "/*",
-      "allowedRoles": ["reader"]
+      "allowedRoles": ["anonymous"]
     }
-  ],
-  "responseOverrides": {
-    "401": {
-      "redirect": "/.auth/login/aad",
-      "statusCode": 302
-    }
-  }
+  ]
 }
