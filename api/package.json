@@ -1,0 +1,15 @@
+{
+  "name": "wbs-cg-api",
+  "version": "1.0.0",
+  "description": "Azure Functions API pour WBS Construction Gauthier",
+  "main": "index.js",
+  "scripts": {
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/storage-blob": "^12.17.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
