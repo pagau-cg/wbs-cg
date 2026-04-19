@@ -26,6 +26,7 @@ function getUserId(req) {
   }
 }
 
+// ── Nouveaux chemins (projets partagés) ──────────────────────────────────────
 function metaBlob(dossierId) {
   return `projects/${safeDossier(dossierId)}/meta.json`;
 }
@@ -42,4 +43,10 @@ function safeRev(id) {
   return (id || "autosave").replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 32);
 }
 
-module.exports = { getContainer, getUserId, metaBlob, revisionBlob, safeDossier, safeRev };
+// ── Compatibilité ancienne API (users/{userId}/projects/{id}.json) ───────────
+function blobName(userId, projectId) {
+  const safeId = (projectId || "projet").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64);
+  return `users/${userId}/projects/${safeId}.json`;
+}
+
+module.exports = { getContainer, getUserId, metaBlob, revisionBlob, safeDossier, safeRev, blobName };
