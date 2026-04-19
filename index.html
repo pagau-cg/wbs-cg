@@ -210,10 +210,17 @@ function togglePhase(num){
       onchange="S.projDuration=parseInt(this.value)||12;autoSaveLocal()" title="Durée totale du projet en mois"/>
     <span style="font-size:11px;color:rgba(255,255,255,.6)">mois</span>
   </div>
+  <div style="display:flex;align-items:center;gap:6px;margin-left:12px">
+    <input id="hdr-dossier" type="text" placeholder="N° dossier" maxlength="20"
+      style="width:90px;padding:3px 7px;font-size:12px;border-radius:4px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff;text-align:center"
+      oninput="S.dossier=this.value;autoSaveLocal()" title="Numéro de dossier"/>
+    <input id="hdr-cp" type="text" placeholder="CP" maxlength="40"
+      style="width:110px;padding:3px 7px;font-size:12px;border-radius:4px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff"
+      oninput="S.cp=this.value;autoSaveLocal()" title="Chargé de projet"/>
+  </div>
   <div class="hdr-sp"></div>
-  <span id="hdr-user" style="font-size:11px;color:rgba(255,255,255,.65);margin-right:4px"></span>
-  <button class="hbtn" id="btn-cloud-save" onclick="saveCloud()" title="Sauvegarder dans Azure (cloud)">☁️ Sauvegarder</button>
-  <button class="hbtn" onclick="openProjectsModal()" title="Mes projets sauvegardés dans Azure">📂 Mes projets</button>
+  <button class="hbtn" onclick="openSaveRevModal()" title="Sauvegarder une révision dans le cloud">💾 Sauvegarder</button>
+  <button class="hbtn" onclick="goTo('projets')" title="Liste des projets WBS">📂 Projets</button>
   <button class="hbtn" onclick="doExportExcel()">📊 Excel</button>
   <button class="hbtn" onclick="doExportCSV()">📄 CSV</button>
   <button class="hbtn" onclick="exportJSON()" title="Exporter une sauvegarde complète JSON (tout inclus)">📦 Exporter JSON</button>
@@ -224,7 +231,11 @@ function togglePhase(num){
 <div class="body">
 <!-- SIDEBAR -->
 <nav class="sidebar">
-  <div class="nsec" style="margin-top:6px">Configuration WBS</div>
+  <div class="nsec" style="margin-top:6px">Projets</div>
+  <div class="nit" id="nav-projets" onclick="goTo('projets')"><span>📂</span> Mes projets</div>
+  <div class="nit" onclick="openSaveRevModal()" style="font-size:12px"><span>💾</span> Sauvegarder</div>
+  <div class="ndiv"></div>
+  <div class="nsec">Configuration WBS</div>
   <div class="nit on" id="nav-phases"   onclick="goTo('phases')">  <span>1️⃣</span> Phases<span class="nbadge" id="nb-phases">–</span></div>
   <div class="nit"    id="nav-secteurs" onclick="goTo('secteurs')"><span>2️⃣</span> Secteurs<span class="nbadge" id="nb-sec">0</span></div>
   <div class="nit"    id="nav-discs"    onclick="goTo('discs')">   <span>3️⃣</span> Disciplines<span class="nbadge" id="nb-disc">0</span></div>
@@ -242,7 +253,7 @@ function togglePhase(num){
   <div class="nit"    id="nav-avancement" onclick="goTo('avancement')"><span>📋</span> Mise à jour</div>
   <div class="nit"    id="nav-budget"   onclick="goTo('budget')"><span>💰</span> Suivi budgétaire</div>  <div class="nit"    id="nav-jalons"   onclick="goTo('jalons')">  <span>📈</span> Courbe PV</div>
   <div class="ndiv"></div>
-  <div class="nit" onclick="openProjectsModal()" style="font-size:12px"><span>☁️</span> Mes projets</div>
+  <div class="nit" onclick="goTo('projets')" style="font-size:12px"><span>📂</span> Tous les projets</div>
   <div class="nit" onclick="resetAll()"  style="font-size:12px"><span>🔄</span> Réinitialiser</div>
   <div class="ndiv"></div>
   <div class="nit"    id="nav-review"   onclick="goTo('review')">  <span>✅</span> Révision</div>
@@ -860,16 +871,17 @@ const DISC_LOTS_MAP={"00":[],"01":["A.01","A.02","A.03","A.04","A.05","A.06","A.
 // ── State ──
 let S = {
   projName: 'Nouveau projet',
+  dossier: '',              // Numéro de dossier (ex: 24-043)
+  cp: '',                   // Chargé de projet
   phases: {1:true, 2:true, 3:true},
   secteurs: [{code:'00', desc:'Global'}],
   activeDiscs: new Set(['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20']),
   lots: [],
   mf: [],
-  // Planning LPS
   plan: {
-    dateDebut: '',       // ISO date string YYYY-MM-DD
-    dureeTotale: 0,      // semaines
-    etapes: []           // Niveau A: [{id, nom, discCodes[], debut, duree, couleur}]
+    dateDebut: '',
+    dureeTotale: 0,
+    etapes: []
   }
 };
 let modalLotId = null;
@@ -883,9 +895,9 @@ const pad = n => String(n).padStart(2,'0');
 function toast(msg){const t=$('toast');t.textContent=msg;t.className='toast show';clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',2800)}
 
 // ── Nav ──
-const VIEWS = ['phases','secteurs','discs','lots','import','mapping','masterplan','gantt','forces','budget','avancement','review','jalons'];
+const VIEWS = ['phases','secteurs','discs','lots','import','mapping','masterplan','gantt','forces','budget','avancement','review','jalons','projets'];
 function goTo(name){
-  VIEWS.forEach(v=>{$('view-'+v).classList.toggle('hidden',v!==name);const n=$('nav-'+v);if(n)n.classList.toggle('on',v===name)});
+  VIEWS.forEach(v=>{const el=$('view-'+v);if(el)el.classList.toggle('hidden',v!==name);const n=$('nav-'+v);if(n)n.classList.toggle('on',v===name)});
   if(name==='lots'){renderLotPhaseSelect();renderLotSecSelect();renderLotDiscSelect();renderWBSTree()}
   if(name==='mapping'){renderMapping()}
   if(name==='review'){renderReview()}
@@ -897,10 +909,11 @@ function goTo(name){
   if(name==='forces'){renderForcesView()}
   if(name==='budget'){renderBudgetView()}
   if(name==='avancement'){renderAvancementView()}
+  if(name==='projets'){renderProjetsList()}
   // Toggle stats bar visibility
   const statsBar = document.getElementById('stats-bar');
   if(statsBar){
-    const hideStats = ["mapping", "masterplan", "gantt", "forces", "budget", "avancement", "jalons"];
+    const hideStats = ["mapping", "masterplan", "gantt", "forces", "budget", "avancement", "jalons", "projets"];
     statsBar.style.display = hideStats.includes(name) ? 'none' : '';
   }
 }
@@ -4838,24 +4851,71 @@ function renderDistribWarnings(){
 // ── RENAME ──
 function renameProj(){const n=prompt('Nom du projet :',S.projName);if(n&&n.trim()){S.projName=n.trim();updateStats()}}
 
-// ── SAVE / LOAD (CLOUD — remplace localStorage) ──
-// saveLocal() est conservé comme backup silencieux ; saveCloud() est l'action utilisateur
+// ── SAVE / LOAD ──
 function saveLocal(){
-  // Redirige vers saveCloud pour conserver le comportement du bouton Sauvegarder
-  saveCloud();
+  try{
+    // Serialize: convert Set to Array, ensure phase keys are strings
+    const d={
+      projName: S.projName,
+      plan: S.plan,
+      phases: {
+        "1": !!S.phases[1], 
+        "2": !!S.phases[2],
+        "3": !!S.phases[3]
+      },
+      secteurs: S.secteurs,
+      activeDiscs: [...S.activeDiscs],
+      lots: S.lots,
+      mf: S.mf
+    };
+    localStorage.setItem('wbs_cg_p06', JSON.stringify(d));
+    autoSaveLocal();
+    toast('✓ Sauvegardé dans le navigateur');
+  }catch(e){toast('⚠ Erreur de sauvegarde : '+e.message)}
 }
 
 function loadLocal(){
-  // Redirige vers la liste de projets cloud
-  openProjectsModal();
+  try{
+    const raw=localStorage.getItem('wbs_cg_p06');
+    if(!raw){toast('Aucune sauvegarde trouvée');return}
+    const parsed=JSON.parse(raw);
+
+    // Restore state — normalize phase keys back to integers
+    S.projName   = parsed.projName || 'Nouveau projet';
+    S.phases     = {1:!!parsed.phases['1'], 2:parsed.phases['2']!==false, 3:!!parsed.phases['3']};
+    S.secteurs   = parsed.secteurs || [{code:'00',desc:'Global'}];
+    S.activeDiscs= new Set(parsed.activeDiscs || []);
+    S.lots       = (parsed.lots || []).map(l=>({
+      pct:0, qty:0, qtyReal:0, unit:'Forfait', note:'',
+      debutSem:0, duree:0, avMode:'pct', predecesseurs:[], mfAlloc:{}, ...l
+    }));
+    S.mf         = parsed.mf || [];
+    if(parsed.plan) S.plan = parsed.plan;
+    lotMFSelected= new Set();
+
+    // Restore UI state
+    // Phase tabs
+    [1,3].forEach(n=>{
+      const t=$('ptab-'+n);
+      if(t) t.className='ptab'+(S.phases[n]?' on':' off');
+    });
+    // Re-render all views
+    renderSecList();
+    renderDiscGrid();
+    renderLotPhaseSelect();
+    renderLotSecSelect();
+    renderLotDiscSelect();
+    renderWBSTree();
+    renderMFList();
+    updateStats();
+    toast('✓ Données chargées — '+S.lots.length+' lot(s), '+S.mf.length+' code(s) MF');
+  }catch(e){toast('⚠ Erreur de chargement : '+e.message)}
 }
 
 function resetAll(){
   if(!confirm('Réinitialiser COMPLÈTEMENT ? Tous les lots, codes MF, planification et paramètres seront effacés. Cette action est irréversible.')) return;
   // Clear localStorage
   try{ localStorage.removeItem('wbs_cg_p06'); }catch(e){}
-  // Clear cloud project reference
-  window._cloudProjectId = null;
   // Reset full state
   S={
     projName:'Nouveau projet',
@@ -5090,322 +5150,363 @@ updateStats();
   </div>
 </div>
 
-<!-- ══ AZURE CLOUD LAYER ══ -->
+<!-- ══ VUE PROJETS ══ -->
+<div id="view-projets" class="hidden">
+  <div style="padding:0 0 18px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--g6)">📂 Projets WBS</div>
+        <div style="font-size:12px;color:var(--g4);margin-top:2px">Tous les projets sauvegardés dans Azure Blob Storage</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="projets-filter-cp" type="text" placeholder="Filtrer par CP..."
+          style="padding:6px 10px;border:1px solid var(--g3);border-radius:var(--r);font-size:13px;width:160px"
+          oninput="renderProjetsList()"/>
+        <input id="projets-filter-name" type="text" placeholder="Rechercher..."
+          style="padding:6px 10px;border:1px solid var(--g3);border-radius:var(--r);font-size:13px;width:180px"
+          oninput="renderProjetsList()"/>
+        <button class="btn bp" onclick="openSaveRevModal()">💾 Sauvegarder révision</button>
+      </div>
+    </div>
+    <div id="projets-list-body">
+      <div style="text-align:center;padding:40px;color:var(--g4)">⏳ Chargement…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL SAUVEGARDER RÉVISION ══ -->
+<div id="save-rev-modal" class="ov">
+  <div class="modal" style="width:480px;max-width:95vw">
+    <div class="mh">
+      <div>
+        <div style="font-size:11px;color:var(--g4);margin-bottom:2px">Sauvegarde cloud</div>
+        <h3>💾 Sauvegarder une révision</h3>
+      </div>
+      <button class="btn bg sm" onclick="closeSaveRevModal()">✕</button>
+    </div>
+    <div class="mb" style="display:flex;flex-direction:column;gap:12px">
+      <div class="ff">
+        <label>Numéro de dossier *</label>
+        <input id="srev-dossier" type="text" placeholder="ex: 24-043" maxlength="20"
+          style="font-family:monospace;font-size:14px;font-weight:600"/>
+      </div>
+      <div class="ff">
+        <label>Nom du projet *</label>
+        <input id="srev-name" type="text" placeholder="ex: Agrandissement École St-Pierre" maxlength="100"/>
+      </div>
+      <div class="ff">
+        <label>Chargé de projet (CP)</label>
+        <input id="srev-cp" type="text" placeholder="ex: Jean Tremblay" maxlength="60"/>
+      </div>
+      <div class="ff">
+        <label>Numéro de révision *</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="srev-id" type="text" placeholder="ex: Rev.00" maxlength="20"
+            style="font-family:monospace;width:120px"/>
+          <span style="font-size:11px;color:var(--g4)">Rev.00 → Rev.01 → Rev.02…</span>
+        </div>
+      </div>
+      <div class="ff">
+        <label>Note (optionnel)</label>
+        <input id="srev-note" type="text" placeholder="ex: Changement façade nord" maxlength="150"/>
+      </div>
+      <div style="background:var(--blue-lt);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--blue)">
+        💡 Un autosave sera aussi créé automatiquement à chaque modification.
+      </div>
+    </div>
+    <div class="mf-modal-foot">
+      <button class="btn" onclick="closeSaveRevModal()">Annuler</button>
+      <button class="btn bp" onclick="doSaveRevision()" id="srev-btn-save">💾 Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ COUCHE AZURE PROJETS ══ -->
 <script>
 // ════════════════════════════════════════════════════════════════════════════
-// COUCHE AZURE — Authentification Entra ID + Blob Storage via Azure Functions
-// Pattern identique à cg-estimation-app
+// COUCHE AZURE — Projets partagés avec révisions
 // ════════════════════════════════════════════════════════════════════════════
 
-// ── Utilitaires ──────────────────────────────────────────────────────────────
-
-/** Sérialise l'état courant S en objet JSON-safe */
-function _serializeState(){
+// ── Sérialisation ────────────────────────────────────────────────────────────
+function _serializeState(meta){
   return {
     version: 2,
     projName: S.projName,
+    dossier: S.dossier || '',
+    cp: S.cp || '',
     plan: S.plan,
     projDuration: S.projDuration || 12,
     phases: {'1':!!S.phases[1],'2':!!S.phases[2],'3':!!S.phases[3]},
     secteurs: S.secteurs,
     activeDiscs: [...S.activeDiscs],
     lots: S.lots,
-    mf: S.mf
+    mf: S.mf,
+    ...(meta || {})
   };
 }
 
-/** Restaure S depuis un objet parsé et re-rend tous les composants */
 function _restoreState(parsed){
   S.projName    = parsed.projName || 'Nouveau projet';
+  S.dossier     = parsed.dossier || '';
+  S.cp          = parsed.cp || '';
   S.projDuration= parsed.projDuration || 12;
   S.plan        = parsed.plan || {dateDebut:'', dureeTotale:0, etapes:[]};
-  S.phases      = {
-    1: !!(parsed.phases?.['1']),
-    2: parsed.phases?.['2'] !== false,
-    3: !!(parsed.phases?.['3'])
-  };
-  S.secteurs    = parsed.secteurs || [{code:'00', desc:'Global'}];
+  S.phases      = {1:!!(parsed.phases?.['1']), 2:parsed.phases?.['2']!==false, 3:!!(parsed.phases?.['3'])};
+  S.secteurs    = parsed.secteurs || [{code:'00',desc:'Global'}];
   S.activeDiscs = new Set(parsed.activeDiscs || []);
-  S.lots        = (parsed.lots || []).map(l=>({
-    pct:0, qty:0, qtyReal:0, unit:'Forfait', note:'',
-    debutSem:0, duree:0, avMode:'pct', predecesseurs:[], mfAlloc:{}, ...l
-  }));
+  S.lots        = (parsed.lots||[]).map(l=>({pct:0,qty:0,qtyReal:0,unit:'Forfait',note:'',debutSem:0,duree:0,avMode:'pct',predecesseurs:[],mfAlloc:{},...l}));
   S.mf          = parsed.mf || [];
   if(typeof lotMFSelected !== 'undefined') lotMFSelected = new Set();
 
   // Sync UI
   if($('proj-duration')) $('proj-duration').value = S.projDuration;
-  [1,2,3].forEach(n=>{
-    const t = $('ptab-'+n);
-    if(t) t.className = 'ptab'+(S.phases[n]?' on':' off');
-  });
-  const pn = $('proj-name') || document.getElementById('hdr-name');
-  if(pn) pn.textContent = S.projName;
-  const hn = document.getElementById('hdr-name');
-  if(hn) hn.textContent = S.projName;
-
+  if($('hdr-dossier')) $('hdr-dossier').value = S.dossier;
+  if($('hdr-cp')) $('hdr-cp').value = S.cp;
+  [1,2,3].forEach(n=>{const t=$('ptab-'+n);if(t)t.className='ptab'+(S.phases[n]?' on':' off')});
+  const hn = document.getElementById('hdr-name'); if(hn) hn.textContent = S.projName;
   renderSecList(); renderDiscGrid(); renderLotPhaseSelect();
   renderLotSecSelect(); renderLotDiscSelect(); renderWBSTree();
   renderMFList(); updateStats();
 }
 
-/** Génère un projectId slugifié à partir du nom de projet */
-function _projectIdFromName(name){
-  return (name || 'nouveau-projet')
-    .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .replace(/[^a-z0-9]+/g,'-')
-    .replace(/^-+|-+$/g,'')
-    .slice(0, 60) || 'projet';
-}
-
-// ── Authentification ─────────────────────────────────────────────────────────
-let _currentUser = null;
-
-async function initAuth(){
-  try{
-    const resp = await fetch('/.auth/me');
-    if(!resp.ok) return;
-    const data = await resp.json();
-    const principal = data?.clientPrincipal;
-    if(!principal){ return; }
-    _currentUser = principal;
-    // Afficher UPN tronqué dans le header
-    const el = document.getElementById('hdr-user');
-    if(el){
-      const name = (principal.userDetails || '').split('@')[0];
-      el.textContent = '👤 ' + name;
-      el.title = principal.userDetails || '';
-    }
-    return principal;
-  }catch(e){
-    console.warn('Auth check échoué:', e.message);
-  }
-}
-
-// ── Cloud Save ───────────────────────────────────────────────────────────────
-window._cloudProjectId = null;  // ID du projet chargé/sauvegardé couramment
-let _saveInProgress = false;
-
-async function saveCloud(){
-  if(_saveInProgress){ toast('⏳ Sauvegarde en cours…'); return; }
-
-  // Déterminer ou créer le projectId
-  if(!window._cloudProjectId){
-    window._cloudProjectId = _projectIdFromName(S.projName);
-  }
-
-  const btn = document.getElementById('btn-cloud-save');
-  if(btn) btn.disabled = true;
-  _saveInProgress = true;
-
-  try{
-    const payload = _serializeState();
-    const resp = await fetch('/api/projects/'+encodeURIComponent(window._cloudProjectId), {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
-    });
-
-    if(resp.status === 401){
-      toast('⚠ Non authentifié — rechargez la page');
-      window.location.href = '/.auth/login/aad?post_login_redirect_uri=' + encodeURIComponent(window.location.pathname);
-      return;
-    }
-    if(!resp.ok){
-      const msg = await resp.text();
-      toast('⚠ Erreur sauvegarde cloud : '+msg);
-      return;
-    }
-
-    const result = await resp.json();
-    // Backup localStorage également
-    autoSaveLocal();
-    toast('☁️ Sauvegardé — ' + (result.savedAt ? new Date(result.savedAt).toLocaleTimeString('fr-CA') : ''));
-  }catch(e){
-    toast('⚠ Sauvegarde cloud échouée : '+e.message);
-    // Fallback localStorage
-    autoSaveLocal();
-  }finally{
-    _saveInProgress = false;
-    if(btn){ btn.disabled = false; }
-  }
-}
-
-// AutoSave debouncé : sauvegarde cloud 8s après la dernière modification
-let _autoSaveTimer = null;
-const _origAutoSaveLocal = autoSaveLocal;
-// Surcharge autoSaveLocal pour déclencher aussi le cloud en différé
-window.autoSaveLocal = function(){
-  // 1. Toujours sauvegarder localStorage immédiatement (comportement d'origine)
+// ── AutoSave (localStorage + cloud différé) ──────────────────────────────────
+function autoSaveLocal(){
   try{
     const d = _serializeState();
     localStorage.setItem('wbs_cg_p06', JSON.stringify(d));
   }catch(e){}
-  // 2. Débouncer la sauvegarde cloud (8 secondes d'inactivité)
+  // Autosave cloud si dossier configuré (8 secondes debounce)
   if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
   _autoSaveTimer = setTimeout(async ()=>{
-    if(S.lots.length > 0 || S.mf.length > 0){
-      // Silencieux — pas de toast pour l'autosave
-      if(!window._cloudProjectId){
-        window._cloudProjectId = _projectIdFromName(S.projName);
-      }
-      try{
-        await fetch('/api/projects/'+encodeURIComponent(window._cloudProjectId), {
-          method: 'PUT',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(_serializeState())
-        });
-      }catch(e){ /* silencieux */ }
-    }
+    const dossier = S.dossier || localStorage.getItem('wbs_cg_cur_dossier');
+    if(!dossier || !S.lots.length) return;
+    try{
+      await fetch('/api/revision/'+encodeURIComponent(dossier)+'/autosave', {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({..._serializeState(), _meta:{note:'Autosave',revId:'autosave'}})
+      });
+    }catch(e){}
   }, 8000);
-};
+}
+let _autoSaveTimer = null;
 
-// ── Cloud Load ───────────────────────────────────────────────────────────────
-async function loadCloudProject(projectId){
-  closeProjectsModal();
-  toast('⏳ Chargement…');
+// ── Save / Load (remplace les fonctions localStorage) ────────────────────────
+function saveLocal(){ openSaveRevModal(); }
+function loadLocal(){ goTo('projets'); }
+
+// ── Modal Sauvegarder révision ───────────────────────────────────────────────
+function openSaveRevModal(){
+  const m = document.getElementById('save-rev-modal');
+  m.classList.add('open');
+  // Pré-remplir
+  if($('srev-dossier')) $('srev-dossier').value = S.dossier || '';
+  if($('srev-name'))    $('srev-name').value    = S.projName || '';
+  if($('srev-cp'))      $('srev-cp').value      = S.cp || '';
+  // Proposer prochain numéro de révision
+  const curRev = localStorage.getItem('wbs_cg_last_rev') || '';
+  const nextRev = _nextRevId(curRev);
+  if($('srev-id'))      $('srev-id').value      = nextRev;
+  if($('srev-note'))    $('srev-note').value     = '';
+}
+
+function closeSaveRevModal(){
+  document.getElementById('save-rev-modal').classList.remove('open');
+}
+
+function _nextRevId(last){
+  if(!last) return 'Rev.00';
+  const m = last.match(/Rev\.(\d+)$/i);
+  if(m) return 'Rev.'+String(parseInt(m[1])+1).padStart(2,'0');
+  return 'Rev.00';
+}
+
+async function doSaveRevision(){
+  const dossier = ($('srev-dossier').value || '').trim();
+  const name    = ($('srev-name').value || '').trim();
+  const cp      = ($('srev-cp').value || '').trim();
+  const revId   = ($('srev-id').value || '').trim();
+  const note    = ($('srev-note').value || '').trim();
+
+  if(!dossier){ toast('⚠ Numéro de dossier requis'); $('srev-dossier').focus(); return; }
+  if(!name)   { toast('⚠ Nom du projet requis'); $('srev-name').focus(); return; }
+  if(!revId)  { toast('⚠ Numéro de révision requis'); $('srev-id').focus(); return; }
+
+  // Mettre à jour S
+  S.dossier = dossier; S.projName = name; S.cp = cp;
+  if($('hdr-dossier')) $('hdr-dossier').value = dossier;
+  if($('hdr-cp'))      $('hdr-cp').value = cp;
+  const hn = document.getElementById('hdr-name'); if(hn) hn.textContent = name;
+
+  const btn = $('srev-btn-save');
+  if(btn) btn.disabled = true;
+
   try{
-    const resp = await fetch('/api/projects/'+encodeURIComponent(projectId));
-    if(resp.status === 404){ toast('⚠ Projet introuvable'); return; }
-    if(!resp.ok){ toast('⚠ Erreur : '+resp.status); return; }
-    const parsed = await resp.json();
-    _restoreState(parsed);
-    window._cloudProjectId = projectId;
-    autoSaveLocal(); // sync localStorage aussi
-    toast('☁️ Projet chargé — '+S.lots.length+' lot(s), '+S.mf.length+' code(s) MF');
+    const payload = {..._serializeState(), _meta:{revId, note}};
+    const resp = await fetch('/api/revision/'+encodeURIComponent(dossier)+'/'+encodeURIComponent(revId), {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(!resp.ok){ const msg = await resp.text(); toast('⚠ Erreur : '+msg); return; }
+    localStorage.setItem('wbs_cg_last_rev', revId);
+    localStorage.setItem('wbs_cg_cur_dossier', dossier);
+    autoSaveLocal();
+    closeSaveRevModal();
+    toast('✅ '+revId+' sauvegardée — '+dossier+' — '+name);
   }catch(e){
-    toast('⚠ Chargement échoué : '+e.message);
+    toast('⚠ Sauvegarde échouée : '+e.message);
+  }finally{
+    if(btn) btn.disabled = false;
   }
 }
 
-// ── Delete Cloud Project ─────────────────────────────────────────────────────
-async function deleteCloudProject(projectId, projName){
-  if(!confirm('Supprimer définitivement "'+projName+'" du cloud ?')) return;
-  try{
-    const resp = await fetch('/api/projects/'+encodeURIComponent(projectId), {method:'DELETE'});
-    if(resp.ok){
-      toast('🗑 Projet supprimé');
-      openProjectsModal(); // rafraîchir la liste
-    }else{
-      toast('⚠ Erreur suppression : '+resp.status);
-    }
-  }catch(e){
-    toast('⚠ Erreur : '+e.message);
-  }
-}
-
-// ── Projects Modal ───────────────────────────────────────────────────────────
-async function openProjectsModal(){
-  const modal = document.getElementById('projects-modal');
-  const body  = document.getElementById('projects-modal-body');
-  modal.classList.add('open');
-  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--g4)">⏳ Chargement des projets…</div>';
+// ── Vue liste de projets ─────────────────────────────────────────────────────
+async function renderProjetsList(){
+  const body = document.getElementById('projets-list-body');
+  if(!body) return;
+  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--g4)">⏳ Chargement…</div>';
 
   try{
-    const resp = await fetch('/api/listProjects');
-    if(resp.status === 401){
-      body.innerHTML = '<div style="padding:20px;color:var(--red)">⚠ Non authentifié. <a href="/.auth/login/aad">Se connecter</a></div>';
-      return;
-    }
-    const projects = await resp.json();
+    const resp = await fetch('/api/projectsList');
+    if(!resp.ok){ body.innerHTML = '<div style="padding:20px;color:var(--red)">⚠ Erreur '+resp.status+'</div>'; return; }
+    let projects = await resp.json();
+
+    const filterCP   = ($('projets-filter-cp')?.value  || '').toLowerCase();
+    const filterName = ($('projets-filter-name')?.value || '').toLowerCase();
+
+    if(filterCP)   projects = projects.filter(p => (p.cp||'').toLowerCase().includes(filterCP));
+    if(filterName) projects = projects.filter(p =>
+      (p.projName||'').toLowerCase().includes(filterName) ||
+      (p.dossierId||'').toLowerCase().includes(filterName));
 
     if(!projects.length){
-      body.innerHTML = `
-        <div style="text-align:center;padding:40px;color:var(--g4)">
-          <div style="font-size:32px;margin-bottom:12px">☁️</div>
-          <div style="font-size:14px;font-weight:600;margin-bottom:6px">Aucun projet sauvegardé</div>
-          <div style="font-size:12px">Cliquez sur <strong>☁️ Sauvegarder</strong> pour créer votre première sauvegarde cloud.</div>
-        </div>`;
-      return;
+      body.innerHTML = `<div style="text-align:center;padding:50px;color:var(--g4)">
+        <div style="font-size:32px;margin-bottom:12px">📂</div>
+        <div style="font-weight:600;margin-bottom:6px">Aucun projet trouvé</div>
+        <div style="font-size:12px">Cliquez sur <strong>💾 Sauvegarder révision</strong> pour créer votre premier projet.</div>
+      </div>`; return;
     }
 
-    const rows = projects.map(p => {
-      const date = p.savedAt ? new Date(p.savedAt).toLocaleString('fr-CA',{dateStyle:'medium',timeStyle:'short'}) : '—';
-      const isCurrent = window._cloudProjectId === p.projectId;
-      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--g2);${isCurrent?'background:var(--blue-lt)':''}">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:${isCurrent?700:500};color:var(--g6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-            ${isCurrent?'📍 ':''}${p.projName || p.projectId}
+    // Liste des CP pour filtre rapide
+    const allCPs = [...new Set(projects.map(p=>p.cp).filter(Boolean))].sort();
+
+    let html = '';
+    if(allCPs.length > 1){
+      html += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <span style="font-size:11px;color:var(--g4);align-self:center">CP :</span>
+        <button class="btn sm" onclick="$('projets-filter-cp').value='';renderProjetsList()" style="font-size:11px">Tous</button>
+        ${allCPs.map(cp=>`<button class="btn sm" onclick="$('projets-filter-cp').value='${cp.replace(/'/g,"\\'")}';renderProjetsList()" style="font-size:11px">${cp}</button>`).join('')}
+      </div>`;
+    }
+
+    html += '<div style="display:flex;flex-direction:column;gap:10px">';
+    projects.forEach(p => {
+      const isCurrent = (S.dossier === p.dossierId);
+      const revRows = (p.revisions||[]).map(r => {
+        const date = r.savedAt ? new Date(r.savedAt).toLocaleString('fr-CA',{dateStyle:'short',timeStyle:'short'}) : '—';
+        return `<tr style="border-top:1px solid var(--g2)">
+          <td style="padding:5px 10px;font-family:monospace;font-size:12px;color:var(--blue);font-weight:600">${r.revId}</td>
+          <td style="padding:5px 10px;font-size:11px;color:var(--g5)">${r.note||'—'}</td>
+          <td style="padding:5px 10px;font-size:11px;color:var(--g4)">${r.savedBy?.split('@')[0]||'—'}</td>
+          <td style="padding:5px 10px;font-size:11px;color:var(--g4)">${date}</td>
+          <td style="padding:5px 10px;text-align:right">
+            <button class="btn bp sm" style="font-size:11px" onclick="loadRevision('${p.dossierId}','${r.revId}')">⬆ Charger</button>
+            <button class="btn bd sm" style="font-size:11px;margin-left:4px" onclick="deleteRevision('${p.dossierId}','${r.revId}','${p.projName?.replace(/'/g,"\\'")||''}')">✕</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+      html += `<div style="background:var(--white);border:1px solid ${isCurrent?'var(--blue)':'var(--g3)'};border-radius:var(--r);overflow:hidden;${isCurrent?'box-shadow:0 0 0 2px rgba(0,120,212,.15)':''}">
+        <div style="padding:10px 14px;background:${isCurrent?'var(--blue-lt)':'var(--g1)'};display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div>
+            <code style="font-size:13px;font-weight:700;color:var(--blue)">${p.dossierId}</code>
+            <span style="font-size:14px;font-weight:600;color:var(--g6);margin-left:8px">${p.projName||'—'}</span>
+            ${isCurrent?'<span style="font-size:10px;background:var(--blue);color:#fff;border-radius:99px;padding:1px 7px;margin-left:6px">EN COURS</span>':''}
           </div>
-          <div style="font-size:11px;color:var(--g4);margin-top:2px">
-            <code style="font-size:10px">${p.projectId}</code> · ${date}
+          <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+            ${p.cp?`<span style="font-size:11px;color:var(--g4)">👷 ${p.cp}</span>`:''}
+            <span style="font-size:11px;color:var(--g4)">${(p.revisions||[]).length} rév.</span>
+            <button class="btn sm" style="font-size:11px" onclick="deleteProject('${p.dossierId}','${p.projName?.replace(/'/g,"\\'")||''}')">🗑 Supprimer</button>
           </div>
         </div>
-        <button class="btn bp sm" onclick="loadCloudProject('${p.projectId}')">Ouvrir</button>
-        <button class="btn bd sm" onclick="deleteCloudProject('${p.projectId}','${(p.projName||'').replace(/'/g,"\\'")}')">🗑</button>
+        ${revRows ? `<table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--g2);font-size:10px;color:var(--g4);text-transform:uppercase;letter-spacing:.04em">
+            <th style="padding:4px 10px;text-align:left">Révision</th>
+            <th style="padding:4px 10px;text-align:left">Note</th>
+            <th style="padding:4px 10px;text-align:left">Sauvegardé par</th>
+            <th style="padding:4px 10px;text-align:left">Date</th>
+            <th style="padding:4px 10px"></th>
+          </tr></thead>
+          <tbody>${revRows}</tbody>
+        </table>` : '<div style="padding:10px 14px;font-size:12px;color:var(--g4);font-style:italic">Aucune révision manuelle — autosave actif</div>'}
       </div>`;
-    }).join('');
-
-    body.innerHTML = `
-      <div style="padding:10px 14px 4px;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:11px;color:var(--g4)">${projects.length} projet(s) sauvegardé(s)</span>
-        <button class="btn bp sm" onclick="saveCloud();closeProjectsModal()" style="font-size:12px">☁️ Sauvegarder le projet actuel</button>
-      </div>
-      <div>${rows}</div>`;
+    });
+    html += '</div>';
+    body.innerHTML = html;
   }catch(e){
-    body.innerHTML = '<div style="padding:20px;color:var(--red)">⚠ Erreur : '+e.message+'</div>';
+    body.innerHTML = '<div style="padding:20px;color:var(--red)">⚠ '+e.message+'</div>';
   }
 }
 
-function closeProjectsModal(){
-  document.getElementById('projects-modal').classList.remove('open');
+// ── Charger une révision ─────────────────────────────────────────────────────
+async function loadRevision(dossierId, revId){
+  toast('⏳ Chargement '+revId+'…');
+  try{
+    const resp = await fetch('/api/revision/'+encodeURIComponent(dossierId)+'/'+encodeURIComponent(revId));
+    if(!resp.ok){ toast('⚠ Erreur '+resp.status); return; }
+    const parsed = await resp.json();
+    _restoreState(parsed);
+    localStorage.setItem('wbs_cg_cur_dossier', dossierId);
+    localStorage.setItem('wbs_cg_last_rev', revId);
+    autoSaveLocal();
+    goTo('lots');
+    toast('✅ '+revId+' chargé — '+parsed.projName);
+  }catch(e){ toast('⚠ '+e.message); }
+}
+
+// ── Supprimer une révision ───────────────────────────────────────────────────
+async function deleteRevision(dossierId, revId, projName){
+  if(!confirm('Supprimer la révision "'+revId+'" de "'+projName+'" ?')) return;
+  try{
+    const resp = await fetch('/api/revision/'+encodeURIComponent(dossierId)+'/'+encodeURIComponent(revId), {method:'DELETE'});
+    if(resp.ok){ toast('🗑 Révision supprimée'); renderProjetsList(); }
+    else toast('⚠ Erreur suppression');
+  }catch(e){ toast('⚠ '+e.message); }
+}
+
+// ── Supprimer un projet entier ───────────────────────────────────────────────
+async function deleteProject(dossierId, projName){
+  if(!confirm('Supprimer TOUT le projet "'+projName+'" ('+dossierId+') et toutes ses révisions ?')) return;
+  // Lister et supprimer tous les blobs du projet
+  try{
+    const resp = await fetch('/api/projectsList');
+    const projects = await resp.json();
+    const p = projects.find(x=>x.dossierId===dossierId);
+    if(!p){ toast('Projet introuvable'); return; }
+    for(const r of (p.revisions||[])){
+      await fetch('/api/revision/'+encodeURIComponent(dossierId)+'/'+encodeURIComponent(r.revId), {method:'DELETE'});
+    }
+    // Supprimer autosave
+    await fetch('/api/revision/'+encodeURIComponent(dossierId)+'/autosave', {method:'DELETE'}).catch(()=>{});
+    toast('🗑 Projet supprimé');
+    renderProjetsList();
+  }catch(e){ toast('⚠ '+e.message); }
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
-(async function initCloud(){
-  await initAuth();
-  // Tenter de récupérer le dernier projet depuis le cloud au démarrage
-  // On utilise le localStorage pour connaître le dernier projectId ouvert
-  try{
-    const lastId = localStorage.getItem('wbs_cg_last_cloud_id');
-    if(lastId && lastId !== 'null'){
-      window._cloudProjectId = lastId;
-      const resp = await fetch('/api/projects/'+encodeURIComponent(lastId));
-      if(resp.ok){
-        const parsed = await resp.json();
-        // Seulement si le cloud est plus récent que localStorage
-        const cloudDate = parsed._meta?.savedAt ? new Date(parsed._meta.savedAt) : null;
-        const localRaw  = localStorage.getItem('wbs_cg_p06');
-        if(cloudDate && localRaw){
-          // Charger le cloud silencieusement (il a la priorité)
-          _restoreState(parsed);
-          toast('☁️ Projet restauré depuis le cloud');
-        }
-      }
-    }
-  }catch(e){ /* silencieux — localStorage déjà chargé par l'init */ }
+(function initCloud(){
+  // Restaurer dossier/cp dans l'UI depuis localStorage
+  const saved = localStorage.getItem('wbs_cg_p06');
+  if(saved){
+    try{
+      const p = JSON.parse(saved);
+      if(p.dossier && $('hdr-dossier')) $('hdr-dossier').value = p.dossier;
+      if(p.cp && $('hdr-cp')) $('hdr-cp').value = p.cp;
+    }catch(e){}
+  }
 })();
-
-// Sauvegarder le cloudProjectId dans localStorage à chaque changement
-Object.defineProperty(window, '_cloudProjectId', {
-  get(){ return this.__cpid; },
-  set(v){
-    this.__cpid = v;
-    try{ localStorage.setItem('wbs_cg_last_cloud_id', v || ''); }catch(e){}
-  },
-  configurable: true
-});
 </script>
-
-<!-- ══ PROJECTS MODAL ══ -->
-<div id="projects-modal" class="ov">
-  <div class="modal" style="width:600px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column">
-    <div class="mh" style="flex-shrink:0">
-      <div>
-        <div style="font-size:11px;color:var(--g4);margin-bottom:2px">Azure Blob Storage</div>
-        <h3 style="font-size:15px">☁️ Mes projets WBS</h3>
-      </div>
-      <button class="btn bg sm" onclick="closeProjectsModal()">✕</button>
-    </div>
-    <div class="mb" id="projects-modal-body" style="overflow-y:auto;flex:1;padding:0">
-      <!-- Dynamic content -->
-    </div>
-    <div class="mf-modal-foot" style="flex-shrink:0">
-      <button class="btn" onclick="closeProjectsModal()">Fermer</button>
-    </div>
-  </div>
-</div>
 
 </body>
 </html>
