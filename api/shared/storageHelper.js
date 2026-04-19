@@ -26,9 +26,20 @@ function getUserId(req) {
   }
 }
 
-function blobName(userId, projectId) {
-  const safeId = projectId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64);
-  return `users/${userId}/projects/${safeId}.json`;
+function metaBlob(dossierId) {
+  return `projects/${safeDossier(dossierId)}/meta.json`;
 }
 
-module.exports = { getContainer, getUserId, blobName };
+function revisionBlob(dossierId, revId) {
+  return `projects/${safeDossier(dossierId)}/revisions/${safeRev(revId)}.json`;
+}
+
+function safeDossier(id) {
+  return (id || "sans-numero").replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 64);
+}
+
+function safeRev(id) {
+  return (id || "autosave").replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 32);
+}
+
+module.exports = { getContainer, getUserId, metaBlob, revisionBlob, safeDossier, safeRev };
