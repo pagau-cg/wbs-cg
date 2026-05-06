@@ -210,17 +210,8 @@ function togglePhase(num){
       onchange="S.projDuration=parseInt(this.value)||12;autoSaveLocal()" title="Durée totale du projet en mois"/>
     <span style="font-size:11px;color:rgba(255,255,255,.6)">mois</span>
   </div>
-  <div style="display:flex;align-items:center;gap:6px;margin-left:12px">
-    <input id="hdr-dossier" type="text" placeholder="N° dossier" maxlength="20"
-      style="width:90px;padding:3px 7px;font-size:12px;border-radius:4px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff;text-align:center"
-      oninput="S.dossier=this.value;autoSaveLocal()" title="Numéro de dossier"/>
-    <input id="hdr-cp" type="text" placeholder="CP" maxlength="40"
-      style="width:110px;padding:3px 7px;font-size:12px;border-radius:4px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff"
-      oninput="S.cp=this.value;autoSaveLocal()" title="Chargé de projet"/>
-  </div>
   <div class="hdr-sp"></div>
-  <button class="hbtn" onclick="openSaveRevModal()" title="Sauvegarder une révision dans le cloud">💾 Sauvegarder</button>
-  <button class="hbtn" onclick="goTo('projets')" title="Liste des projets WBS">📂 Projets</button>
+  <button class="hbtn" onclick="saveLocal()">💾 Sauvegarder</button>
   <button class="hbtn" onclick="doExportExcel()">📊 Excel</button>
   <button class="hbtn" onclick="doExportCSV()">📄 CSV</button>
   <button class="hbtn" onclick="exportJSON()" title="Exporter une sauvegarde complète JSON (tout inclus)">📦 Exporter JSON</button>
@@ -231,11 +222,7 @@ function togglePhase(num){
 <div class="body">
 <!-- SIDEBAR -->
 <nav class="sidebar">
-  <div class="nsec" style="margin-top:6px">Projets</div>
-  <div class="nit" id="nav-projets" onclick="goTo('projets')"><span>📂</span> Mes projets</div>
-  <div class="nit" onclick="openSaveRevModal()" style="font-size:12px"><span>💾</span> Sauvegarder</div>
-  <div class="ndiv"></div>
-  <div class="nsec">Configuration WBS</div>
+  <div class="nsec" style="margin-top:6px">Configuration WBS</div>
   <div class="nit on" id="nav-phases"   onclick="goTo('phases')">  <span>1️⃣</span> Phases<span class="nbadge" id="nb-phases">–</span></div>
   <div class="nit"    id="nav-secteurs" onclick="goTo('secteurs')"><span>2️⃣</span> Secteurs<span class="nbadge" id="nb-sec">0</span></div>
   <div class="nit"    id="nav-discs"    onclick="goTo('discs')">   <span>3️⃣</span> Disciplines<span class="nbadge" id="nb-disc">0</span></div>
@@ -244,6 +231,7 @@ function togglePhase(num){
   <div class="nsec">Budget</div>
   <div class="nit"    id="nav-import"   onclick="goTo('import')">  <span>📋</span> Import MF<span class="nbadge" id="nb-mf">0</span></div>
   <div class="nit"    id="nav-mapping"  onclick="goTo('mapping')"> <span>🔗</span> Mapping<span class="nbadge" id="nb-links">0</span></div>
+  <div class="nit"    id="nav-matrice"  onclick="goTo('matrice')"> <span>⊞</span> Matrice MF</div>
   <div class="ndiv"></div>
   <div class="nsec">Livrables</div>
 
@@ -253,7 +241,7 @@ function togglePhase(num){
   <div class="nit"    id="nav-avancement" onclick="goTo('avancement')"><span>📋</span> Mise à jour</div>
   <div class="nit"    id="nav-budget"   onclick="goTo('budget')"><span>💰</span> Suivi budgétaire</div>  <div class="nit"    id="nav-jalons"   onclick="goTo('jalons')">  <span>📈</span> Courbe PV</div>
   <div class="ndiv"></div>
-  <div class="nit" onclick="goTo('projets')" style="font-size:12px"><span>📂</span> Tous les projets</div>
+  <div class="nit" onclick="loadLocal()" style="font-size:12px"><span>📂</span> Charger</div>
   <div class="nit" onclick="resetAll()"  style="font-size:12px"><span>🔄</span> Réinitialiser</div>
   <div class="ndiv"></div>
   <div class="nit"    id="nav-review"   onclick="goTo('review')">  <span>✅</span> Révision</div>
@@ -871,17 +859,16 @@ const DISC_LOTS_MAP={"00":[],"01":["A.01","A.02","A.03","A.04","A.05","A.06","A.
 // ── State ──
 let S = {
   projName: 'Nouveau projet',
-  dossier: '',              // Numéro de dossier (ex: 24-043)
-  cp: '',                   // Chargé de projet
   phases: {1:true, 2:true, 3:true},
   secteurs: [{code:'00', desc:'Global'}],
   activeDiscs: new Set(['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20']),
   lots: [],
   mf: [],
+  // Planning LPS
   plan: {
-    dateDebut: '',
-    dureeTotale: 0,
-    etapes: []
+    dateDebut: '',       // ISO date string YYYY-MM-DD
+    dureeTotale: 0,      // semaines
+    etapes: []           // Niveau A: [{id, nom, discCodes[], debut, duree, couleur}]
   }
 };
 let modalLotId = null;
@@ -895,11 +882,12 @@ const pad = n => String(n).padStart(2,'0');
 function toast(msg){const t=$('toast');t.textContent=msg;t.className='toast show';clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',2800)}
 
 // ── Nav ──
-const VIEWS = ['phases','secteurs','discs','lots','import','mapping','masterplan','gantt','forces','budget','avancement','review','jalons','projets'];
+const VIEWS = ['phases','secteurs','discs','lots','import','mapping','matrice','masterplan','gantt','forces','budget','avancement','review','jalons'];
 function goTo(name){
-  VIEWS.forEach(v=>{const el=$('view-'+v);if(el)el.classList.toggle('hidden',v!==name);const n=$('nav-'+v);if(n)n.classList.toggle('on',v===name)});
+  VIEWS.forEach(v=>{$('view-'+v).classList.toggle('hidden',v!==name);const n=$('nav-'+v);if(n)n.classList.toggle('on',v===name)});
   if(name==='lots'){renderLotPhaseSelect();renderLotSecSelect();renderLotDiscSelect();renderWBSTree()}
   if(name==='mapping'){renderMapping()}
+  if(name==='matrice'){renderMatriceMF()}
   if(name==='review'){renderReview()}
   if(name==='jalons'){renderJalonsView(); const nd=$('nav-jalons'); if(nd) nd.classList.toggle('on',true);}
   if(name==='secteurs'){renderSecList()}
@@ -909,11 +897,10 @@ function goTo(name){
   if(name==='forces'){renderForcesView()}
   if(name==='budget'){renderBudgetView()}
   if(name==='avancement'){renderAvancementView()}
-  if(name==='projets'){renderProjetsList()}
   // Toggle stats bar visibility
   const statsBar = document.getElementById('stats-bar');
   if(statsBar){
-    const hideStats = ["mapping", "masterplan", "gantt", "forces", "budget", "avancement", "jalons", "projets"];
+    const hideStats = ["mapping", "matrice", "masterplan", "gantt", "forces", "budget", "avancement", "jalons"];
     statsBar.style.display = hideStats.includes(name) ? 'none' : '';
   }
 }
@@ -5150,363 +5137,361 @@ updateStats();
   </div>
 </div>
 
-<!-- ══ VUE PROJETS ══ -->
-<div id="view-projets" class="hidden">
-  <div style="padding:0 0 18px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-      <div>
-        <div style="font-size:20px;font-weight:700;color:var(--g6)">📂 Projets WBS</div>
-        <div style="font-size:12px;color:var(--g4);margin-top:2px">Tous les projets sauvegardés dans Azure Blob Storage</div>
-      </div>
-      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <input id="projets-filter-cp" type="text" placeholder="Filtrer par CP..."
-          style="padding:6px 10px;border:1px solid var(--g3);border-radius:var(--r);font-size:13px;width:160px"
-          oninput="renderProjetsList()"/>
-        <input id="projets-filter-name" type="text" placeholder="Rechercher..."
-          style="padding:6px 10px;border:1px solid var(--g3);border-radius:var(--r);font-size:13px;width:180px"
-          oninput="renderProjetsList()"/>
-        <button class="btn bp" onclick="openSaveRevModal()">💾 Sauvegarder révision</button>
-      </div>
-    </div>
-    <div id="projets-list-body">
-      <div style="text-align:center;padding:40px;color:var(--g4)">⏳ Chargement…</div>
-    </div>
-  </div>
-</div>
-
-<!-- ══ MODAL SAUVEGARDER RÉVISION ══ -->
-<div id="save-rev-modal" class="ov">
-  <div class="modal" style="width:480px;max-width:95vw">
-    <div class="mh">
-      <div>
-        <div style="font-size:11px;color:var(--g4);margin-bottom:2px">Sauvegarde cloud</div>
-        <h3>💾 Sauvegarder une révision</h3>
-      </div>
-      <button class="btn bg sm" onclick="closeSaveRevModal()">✕</button>
-    </div>
-    <div class="mb" style="display:flex;flex-direction:column;gap:12px">
-      <div class="ff">
-        <label>Numéro de dossier *</label>
-        <input id="srev-dossier" type="text" placeholder="ex: 24-043" maxlength="20"
-          style="font-family:monospace;font-size:14px;font-weight:600"/>
-      </div>
-      <div class="ff">
-        <label>Nom du projet *</label>
-        <input id="srev-name" type="text" placeholder="ex: Agrandissement École St-Pierre" maxlength="100"/>
-      </div>
-      <div class="ff">
-        <label>Chargé de projet (CP)</label>
-        <input id="srev-cp" type="text" placeholder="ex: Jean Tremblay" maxlength="60"/>
-      </div>
-      <div class="ff">
-        <label>Numéro de révision *</label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="srev-id" type="text" placeholder="ex: Rev.00" maxlength="20"
-            style="font-family:monospace;width:120px"/>
-          <span style="font-size:11px;color:var(--g4)">Rev.00 → Rev.01 → Rev.02…</span>
-        </div>
-      </div>
-      <div class="ff">
-        <label>Note (optionnel)</label>
-        <input id="srev-note" type="text" placeholder="ex: Changement façade nord" maxlength="150"/>
-      </div>
-      <div style="background:var(--blue-lt);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--blue)">
-        💡 Un autosave sera aussi créé automatiquement à chaque modification.
+<!-- ══ VUE MATRICE MF → LOTS ══ -->
+<div id="view-matrice" class="hidden">
+  <div class="card" style="min-height:500px">
+    <div class="ch">
+      <span>⊞</span>
+      <span class="ct">Matrice d'assignation — MF → Lots L4</span>
+      <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <select id="mat-f-phase" style="font-size:12px;padding:3px 7px;border:1px solid var(--g3);border-radius:var(--r)" onchange="renderMatriceMF()">
+          <option value="">Toutes les phases</option>
+        </select>
+        <select id="mat-f-sec" style="font-size:12px;padding:3px 7px;border:1px solid var(--g3);border-radius:var(--r)" onchange="renderMatriceMF()">
+          <option value="">Tous les secteurs</option>
+        </select>
+        <select id="mat-f-disc" style="font-size:12px;padding:3px 7px;border:1px solid var(--g3);border-radius:var(--r)" onchange="renderMatriceMF()">
+          <option value="">Toutes les disciplines</option>
+        </select>
+        <button class="btn sm bt" onclick="autoMapMatrice()" style="font-size:11px">⚡ Auto-assigner</button>
+        <button class="btn sm bp" onclick="saveMatriceTemplate()" style="font-size:11px">💾 Sauver template</button>
+        <button class="btn sm" onclick="loadMatriceTemplate()" style="font-size:11px">📂 Charger template</button>
       </div>
     </div>
-    <div class="mf-modal-foot">
-      <button class="btn" onclick="closeSaveRevModal()">Annuler</button>
-      <button class="btn bp" onclick="doSaveRevision()" id="srev-btn-save">💾 Sauvegarder</button>
+    <div class="cb" style="padding:0">
+      <!-- Légende + stats -->
+      <div id="mat-stats" style="display:flex;gap:16px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--g2);font-size:11px;flex-wrap:wrap"></div>
+      <!-- Matrice scrollable -->
+      <div style="overflow:auto;max-height:calc(100vh - 280px)">
+        <div id="mat-body"></div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ══ COUCHE AZURE PROJETS ══ -->
 <script>
-// ════════════════════════════════════════════════════════════════════════════
-// COUCHE AZURE — Projets partagés avec révisions
-// ════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
+// MATRICE MF → LOTS L4
+// Rows = MF codes, Columns = Lots L4 filtrés
+// ══════════════════════════════════════════════════════════════════
 
-// ── Sérialisation ────────────────────────────────────────────────────────────
-function _serializeState(meta){
-  return {
-    version: 2,
-    projName: S.projName,
-    dossier: S.dossier || '',
-    cp: S.cp || '',
-    plan: S.plan,
-    projDuration: S.projDuration || 12,
-    phases: {'1':!!S.phases[1],'2':!!S.phases[2],'3':!!S.phases[3]},
-    secteurs: S.secteurs,
-    activeDiscs: [...S.activeDiscs],
-    lots: S.lots,
-    mf: S.mf,
-    ...(meta || {})
-  };
+function _matPopulateFilters(){
+  const PHASE_NAMES = {'1':'Préconstruction','2':'Construction','3':'Mise en service'};
+  const ph = document.getElementById('mat-f-phase');
+  const sc = document.getElementById('mat-f-sec');
+  const di = document.getElementById('mat-f-disc');
+  if(ph && ph.options.length<=1){
+    [...new Set(S.lots.map(l=>l.phase))].sort().forEach(p=>{
+      const o=document.createElement('option');o.value=p;o.textContent='Phase '+p+' — '+(PHASE_NAMES[p]||p);ph.appendChild(o);
+    });
+  }
+  if(sc && sc.options.length<=1){
+    [...new Set(S.lots.map(l=>l.sec))].sort().forEach(s=>{
+      const o=document.createElement('option');o.value=s;
+      const obj=S.secteurs.find(x=>x.code===s);
+      o.textContent=s+' — '+(obj?obj.desc:s);sc.appendChild(o);
+    });
+  }
+  if(di && di.options.length<=1){
+    [...new Set(S.lots.map(l=>l.disc))].sort((a,b)=>parseInt(a)-parseInt(b)).forEach(d=>{
+      const o=document.createElement('option');o.value=d;
+      const obj=P06_DATA.disciplines.find(x=>x.code===d);
+      o.textContent=d+' — '+(obj?obj.desc:d);di.appendChild(o);
+    });
+  }
 }
 
-function _restoreState(parsed){
-  S.projName    = parsed.projName || 'Nouveau projet';
-  S.dossier     = parsed.dossier || '';
-  S.cp          = parsed.cp || '';
-  S.projDuration= parsed.projDuration || 12;
-  S.plan        = parsed.plan || {dateDebut:'', dureeTotale:0, etapes:[]};
-  S.phases      = {1:!!(parsed.phases?.['1']), 2:parsed.phases?.['2']!==false, 3:!!(parsed.phases?.['3'])};
-  S.secteurs    = parsed.secteurs || [{code:'00',desc:'Global'}];
-  S.activeDiscs = new Set(parsed.activeDiscs || []);
-  S.lots        = (parsed.lots||[]).map(l=>({pct:0,qty:0,qtyReal:0,unit:'Forfait',note:'',debutSem:0,duree:0,avMode:'pct',predecesseurs:[],mfAlloc:{},...l}));
-  S.mf          = parsed.mf || [];
-  if(typeof lotMFSelected !== 'undefined') lotMFSelected = new Set();
+function renderMatriceMF(){
+  const el = document.getElementById('mat-body');
+  const statsEl = document.getElementById('mat-stats');
+  if(!el) return;
 
-  // Sync UI
-  if($('proj-duration')) $('proj-duration').value = S.projDuration;
-  if($('hdr-dossier')) $('hdr-dossier').value = S.dossier;
-  if($('hdr-cp')) $('hdr-cp').value = S.cp;
-  [1,2,3].forEach(n=>{const t=$('ptab-'+n);if(t)t.className='ptab'+(S.phases[n]?' on':' off')});
-  const hn = document.getElementById('hdr-name'); if(hn) hn.textContent = S.projName;
-  renderSecList(); renderDiscGrid(); renderLotPhaseSelect();
-  renderLotSecSelect(); renderLotDiscSelect(); renderWBSTree();
-  renderMFList(); updateStats();
-}
+  if(!S.mf.length || !S.lots.length){
+    el.innerHTML = '<div class="empty" style="padding:40px">Importez des codes MF et créez des lots L4 pour utiliser la matrice.</div>';
+    if(statsEl) statsEl.innerHTML = '';
+    return;
+  }
 
-// ── AutoSave (localStorage + cloud différé) ──────────────────────────────────
-function autoSaveLocal(){
-  try{
-    const d = _serializeState();
-    localStorage.setItem('wbs_cg_p06', JSON.stringify(d));
-  }catch(e){}
-  // Autosave cloud si dossier configuré (8 secondes debounce)
-  if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(async ()=>{
-    const dossier = S.dossier || localStorage.getItem('wbs_cg_cur_dossier');
-    if(!dossier || !S.lots.length) return;
-    try{
-      await fetch('/api/revision/'+encodeURIComponent(dossier)+'/autosave', {
-        method: 'PUT',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({..._serializeState(), _meta:{note:'Autosave',revId:'autosave'}})
+  _matPopulateFilters();
+
+  // ── Filtrer les lots ──
+  const fPhase = document.getElementById('mat-f-phase')?.value || '';
+  const fSec   = document.getElementById('mat-f-sec')?.value   || '';
+  const fDisc  = document.getElementById('mat-f-disc')?.value  || '';
+
+  const lots = S.lots.filter(l=>{
+    if(fPhase && l.phase!==fPhase) return false;
+    if(fSec   && l.sec!==fSec)     return false;
+    if(fDisc  && l.disc!==fDisc)   return false;
+    return true;
+  });
+
+  if(!lots.length){
+    el.innerHTML = '<div class="empty" style="padding:30px">Aucun lot correspond aux filtres.</div>';
+    return;
+  }
+
+  // ── Grouper les MF par division (2 premiers chiffres) ──
+  const mfGroups = {};
+  S.mf.forEach(m=>{
+    const div = m.code.replace(/ /g,'').slice(0,2);
+    if(!mfGroups[div]) mfGroups[div] = [];
+    mfGroups[div].push(m);
+  });
+  const sortedDivs = Object.keys(mfGroups).sort();
+
+  // ── Stats ──
+  const totalLinks = lots.reduce((s,l)=>s+l.mfLinks.length,0);
+  const unmapped = lots.filter(l=>!l.mfLinks.length).length;
+  const mfLinked = new Set(lots.flatMap(l=>l.mfLinks)).size;
+  if(statsEl) statsEl.innerHTML = `
+    <span style="color:var(--g4)">Lots affichés : <strong>${lots.length}</strong></span>
+    <span style="color:var(--blue)">Liens total : <strong>${totalLinks}</strong></span>
+    <span style="color:var(--teal)">Codes MF utilisés : <strong>${mfLinked}/${S.mf.length}</strong></span>
+    ${unmapped?`<span style="color:var(--amber)">⚠ Lots non mappés : <strong>${unmapped}</strong></span>`:'<span style="color:var(--teal)">✓ Tous les lots mappés</span>'}
+    <span style="font-size:10px;color:var(--g4);margin-left:auto">Cliquez les cellules pour assigner · Ctrl+clic = colonne entière</span>`;
+
+  // ── Construction de la table ──
+  const COL_W = Math.max(52, Math.min(90, Math.floor((window.innerWidth - 360) / lots.length)));
+  const LABEL_W = 280;
+
+  let html = `<table style="border-collapse:collapse;font-size:11px;min-width:${LABEL_W + lots.length*COL_W}px">`;
+
+  // ── En-tête : lots en colonnes ──
+  html += `<thead><tr>
+    <th style="position:sticky;left:0;z-index:20;background:#1a1a2e;color:#fff;padding:6px 10px;text-align:left;min-width:${LABEL_W}px;border-right:2px solid rgba(255,255,255,.15)">
+      Code MF / Lot →
+    </th>`;
+
+  lots.forEach(l=>{
+    const disc = P06_DATA.disciplines.find(d=>d.code===l.disc);
+    const col = DISC_COLORS[l.disc]||'#888';
+    const mapped = l.mfLinks.length > 0;
+    html += `<th style="position:sticky;top:0;z-index:10;background:#1a1a2e;color:#fff;padding:4px 2px;min-width:${COL_W}px;max-width:${COL_W}px;text-align:center;border-right:1px solid rgba(255,255,255,.08);vertical-align:bottom;cursor:pointer" 
+      onclick="toggleMatriceColumn('${l.id}',event)" title="${l.code} — ${l.desc}">
+      <div style="writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);padding:4px 2px;height:90px;overflow:hidden;text-overflow:ellipsis">
+        <span style="display:block;font-size:10px;color:#7eb3ff;font-family:monospace;font-weight:700">${l.code}</span>
+        <span style="display:block;font-size:9px;color:#ccc;margin-top:2px;overflow:hidden;max-height:60px">${l.desc.slice(0,30)}</span>
+      </div>
+      <div style="width:8px;height:8px;border-radius:50%;background:${mapped?col:'#555'};margin:3px auto 2px"></div>
+    </th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  // ── Lignes : MF codes par division ──
+  sortedDivs.forEach(div=>{
+    const codes = mfGroups[div];
+    const divLinkedCount = codes.filter(m=>lots.some(l=>l.mfLinks.includes(m.code))).length;
+
+    // Separator row for division
+    html += `<tr style="background:#f0f4ff">
+      <td colspan="${lots.length+1}" style="padding:4px 10px;font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;position:sticky;left:0;border-bottom:1px solid var(--g3)">
+        Division ${div} &nbsp;·&nbsp; ${divLinkedCount}/${codes.length} codes assignés
+      </td>
+    </tr>`;
+
+    codes.forEach(m=>{
+      const linkedLots = lots.filter(l=>l.mfLinks.includes(m.code));
+      const isLinked = linkedLots.length > 0;
+      const totalAmt = m.amount || 0;
+
+      html += `<tr style="border-bottom:1px solid var(--g2)" class="mat-row">
+        <td style="position:sticky;left:0;z-index:5;background:${isLinked?'var(--teal-lt)':'var(--white)'};border-right:2px solid var(--g2);padding:5px 10px;min-width:${LABEL_W}px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <code style="font-size:11px;font-weight:700;color:var(--blue);min-width:90px">${m.code}</code>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;color:var(--g6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${m.desc||''}">${m.desc||'—'}</div>
+              <div style="font-size:10px;color:var(--g4);margin-top:1px">
+                ${m.qty!=null?m.qty.toLocaleString('fr-CA')+' '+(m.metric||''):''}
+                ${totalAmt?'· '+totalAmt.toLocaleString('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}):''}
+                ${m.heures?'· '+m.heures+' h':''}
+              </div>
+            </div>
+            <span style="font-size:10px;color:${isLinked?'var(--teal)':'var(--g3)'};font-weight:600;min-width:18px;text-align:right">${linkedLots.length||''}</span>
+          </div>
+        </td>`;
+
+      lots.forEach(l=>{
+        const assigned = l.mfLinks.includes(m.code);
+        const discCol = DISC_COLORS[l.disc]||'#888';
+        html += `<td style="text-align:center;padding:2px;border-right:1px solid var(--g2);background:${assigned?'rgba('+hexToRgb(discCol)+',0.12)':'transparent'};cursor:pointer;transition:background .1s"
+          onclick="toggleMatriceCell('${m.code}','${l.id}',event)"
+          title="${assigned?'Retirer':'Assigner'} ${m.code} → ${l.code}"
+          onmouseover="this.style.background='${assigned?'rgba('+hexToRgb(discCol)+',0.25)':'var(--blue-lt)'}'"
+          onmouseout="this.style.background='${assigned?'rgba('+hexToRgb(discCol)+',0.12)':'transparent'}'">
+          ${assigned?`<span style="display:block;width:18px;height:18px;border-radius:3px;background:${discCol};color:#fff;font-size:11px;font-weight:700;line-height:18px;margin:auto">✓</span>`:'<span style="display:block;width:18px;height:18px;border-radius:3px;border:1.5px solid var(--g3);margin:auto"></span>'}
+        </td>`;
       });
-    }catch(e){}
-  }, 8000);
-}
-let _autoSaveTimer = null;
 
-// ── Save / Load (remplace les fonctions localStorage) ────────────────────────
-function saveLocal(){ openSaveRevModal(); }
-function loadLocal(){ goTo('projets'); }
-
-// ── Modal Sauvegarder révision ───────────────────────────────────────────────
-function openSaveRevModal(){
-  const m = document.getElementById('save-rev-modal');
-  m.classList.add('open');
-  // Pré-remplir
-  if($('srev-dossier')) $('srev-dossier').value = S.dossier || '';
-  if($('srev-name'))    $('srev-name').value    = S.projName || '';
-  if($('srev-cp'))      $('srev-cp').value      = S.cp || '';
-  // Proposer prochain numéro de révision
-  const curRev = localStorage.getItem('wbs_cg_last_rev') || '';
-  const nextRev = _nextRevId(curRev);
-  if($('srev-id'))      $('srev-id').value      = nextRev;
-  if($('srev-note'))    $('srev-note').value     = '';
-}
-
-function closeSaveRevModal(){
-  document.getElementById('save-rev-modal').classList.remove('open');
-}
-
-function _nextRevId(last){
-  if(!last) return 'Rev.00';
-  const m = last.match(/Rev\.(\d+)$/i);
-  if(m) return 'Rev.'+String(parseInt(m[1])+1).padStart(2,'0');
-  return 'Rev.00';
-}
-
-async function doSaveRevision(){
-  const dossier = ($('srev-dossier').value || '').trim();
-  const name    = ($('srev-name').value || '').trim();
-  const cp      = ($('srev-cp').value || '').trim();
-  const revId   = ($('srev-id').value || '').trim();
-  const note    = ($('srev-note').value || '').trim();
-
-  if(!dossier){ toast('⚠ Numéro de dossier requis'); $('srev-dossier').focus(); return; }
-  if(!name)   { toast('⚠ Nom du projet requis'); $('srev-name').focus(); return; }
-  if(!revId)  { toast('⚠ Numéro de révision requis'); $('srev-id').focus(); return; }
-
-  // Mettre à jour S
-  S.dossier = dossier; S.projName = name; S.cp = cp;
-  if($('hdr-dossier')) $('hdr-dossier').value = dossier;
-  if($('hdr-cp'))      $('hdr-cp').value = cp;
-  const hn = document.getElementById('hdr-name'); if(hn) hn.textContent = name;
-
-  const btn = $('srev-btn-save');
-  if(btn) btn.disabled = true;
-
-  try{
-    const payload = {..._serializeState(), _meta:{revId, note}};
-    const resp = await fetch('/api/revision/'+encodeURIComponent(dossier)+'/'+encodeURIComponent(revId), {
-      method: 'PUT',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
+      html += '</tr>';
     });
-    if(!resp.ok){ const msg = await resp.text(); toast('⚠ Erreur : '+msg); return; }
-    localStorage.setItem('wbs_cg_last_rev', revId);
-    localStorage.setItem('wbs_cg_cur_dossier', dossier);
-    autoSaveLocal();
-    closeSaveRevModal();
-    toast('✅ '+revId+' sauvegardée — '+dossier+' — '+name);
-  }catch(e){
-    toast('⚠ Sauvegarde échouée : '+e.message);
-  }finally{
-    if(btn) btn.disabled = false;
-  }
+  });
+
+  html += '</tbody></table>';
+  el.innerHTML = html;
 }
 
-// ── Vue liste de projets ─────────────────────────────────────────────────────
-async function renderProjetsList(){
-  const body = document.getElementById('projets-list-body');
-  if(!body) return;
-  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--g4)">⏳ Chargement…</div>';
+// Helper: hex → "r,g,b"
+function hexToRgb(hex){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return isNaN(r)?'0,120,212':`${r},${g},${b}`;
+}
 
-  try{
-    const resp = await fetch('/api/projectsList');
-    if(!resp.ok){ body.innerHTML = '<div style="padding:20px;color:var(--red)">⚠ Erreur '+resp.status+'</div>'; return; }
-    let projects = await resp.json();
+// Toggle une cellule MF ↔ Lot
+function toggleMatriceCell(mfCode, lotId, event){
+  const lot = S.lots.find(l=>l.id===lotId);
+  if(!lot) return;
+  if(lot.mfLinks.includes(mfCode)){
+    lot.mfLinks = lot.mfLinks.filter(c=>c!==mfCode);
+  } else {
+    if(!S.mf.find(m=>m.code===mfCode))
+      S.mf.push({code:mfCode,desc:'',qty:null,metric:'',heures:null,amount:null});
+    lot.mfLinks.push(mfCode);
+  }
+  updateStats();
+  autoSaveLocal();
+  renderMatriceMF(); // re-render pour mettre à jour compteurs
+  renderWBSTree();
+}
 
-    const filterCP   = ($('projets-filter-cp')?.value  || '').toLowerCase();
-    const filterName = ($('projets-filter-name')?.value || '').toLowerCase();
+// Ctrl+clic sur en-tête de colonne = assigner/désassigner tous les MF visibles à ce lot
+function toggleMatriceColumn(lotId, event){
+  if(!event.ctrlKey && !event.metaKey) return;
+  event.preventDefault();
+  const lot = S.lots.find(l=>l.id===lotId);
+  if(!lot) return;
+  const allMF = S.mf.map(m=>m.code);
+  const allAssigned = allMF.every(c=>lot.mfLinks.includes(c));
+  if(allAssigned){
+    lot.mfLinks = lot.mfLinks.filter(c=>!allMF.includes(c));
+    toast('✗ Tous les MF désassignés de '+lot.code);
+  } else {
+    allMF.forEach(c=>{ if(!lot.mfLinks.includes(c)) lot.mfLinks.push(c); });
+    toast('✓ Tous les MF assignés à '+lot.code);
+  }
+  updateStats();
+  autoSaveLocal();
+  renderMatriceMF();
+}
 
-    if(filterCP)   projects = projects.filter(p => (p.cp||'').toLowerCase().includes(filterCP));
-    if(filterName) projects = projects.filter(p =>
-      (p.projName||'').toLowerCase().includes(filterName) ||
-      (p.dossierId||'').toLowerCase().includes(filterName));
-
-    if(!projects.length){
-      body.innerHTML = `<div style="text-align:center;padding:50px;color:var(--g4)">
-        <div style="font-size:32px;margin-bottom:12px">📂</div>
-        <div style="font-weight:600;margin-bottom:6px">Aucun projet trouvé</div>
-        <div style="font-size:12px">Cliquez sur <strong>💾 Sauvegarder révision</strong> pour créer votre premier projet.</div>
-      </div>`; return;
-    }
-
-    // Liste des CP pour filtre rapide
-    const allCPs = [...new Set(projects.map(p=>p.cp).filter(Boolean))].sort();
-
-    let html = '';
-    if(allCPs.length > 1){
-      html += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-        <span style="font-size:11px;color:var(--g4);align-self:center">CP :</span>
-        <button class="btn sm" onclick="$('projets-filter-cp').value='';renderProjetsList()" style="font-size:11px">Tous</button>
-        ${allCPs.map(cp=>`<button class="btn sm" onclick="$('projets-filter-cp').value='${cp.replace(/'/g,"\\'")}';renderProjetsList()" style="font-size:11px">${cp}</button>`).join('')}
-      </div>`;
-    }
-
-    html += '<div style="display:flex;flex-direction:column;gap:10px">';
-    projects.forEach(p => {
-      const isCurrent = (S.dossier === p.dossierId);
-      const revRows = (p.revisions||[]).map(r => {
-        const date = r.savedAt ? new Date(r.savedAt).toLocaleString('fr-CA',{dateStyle:'short',timeStyle:'short'}) : '—';
-        return `<tr style="border-top:1px solid var(--g2)">
-          <td style="padding:5px 10px;font-family:monospace;font-size:12px;color:var(--blue);font-weight:600">${r.revId}</td>
-          <td style="padding:5px 10px;font-size:11px;color:var(--g5)">${r.note||'—'}</td>
-          <td style="padding:5px 10px;font-size:11px;color:var(--g4)">${r.savedBy?.split('@')[0]||'—'}</td>
-          <td style="padding:5px 10px;font-size:11px;color:var(--g4)">${date}</td>
-          <td style="padding:5px 10px;text-align:right">
-            <button class="btn bp sm" style="font-size:11px" onclick="loadRevision('${p.dossierId}','${r.revId}')">⬆ Charger</button>
-            <button class="btn bd sm" style="font-size:11px;margin-left:4px" onclick="deleteRevision('${p.dossierId}','${r.revId}','${p.projName?.replace(/'/g,"\\'")||''}')">✕</button>
-          </td>
-        </tr>`;
-      }).join('');
-
-      html += `<div style="background:var(--white);border:1px solid ${isCurrent?'var(--blue)':'var(--g3)'};border-radius:var(--r);overflow:hidden;${isCurrent?'box-shadow:0 0 0 2px rgba(0,120,212,.15)':''}">
-        <div style="padding:10px 14px;background:${isCurrent?'var(--blue-lt)':'var(--g1)'};display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <div>
-            <code style="font-size:13px;font-weight:700;color:var(--blue)">${p.dossierId}</code>
-            <span style="font-size:14px;font-weight:600;color:var(--g6);margin-left:8px">${p.projName||'—'}</span>
-            ${isCurrent?'<span style="font-size:10px;background:var(--blue);color:#fff;border-radius:99px;padding:1px 7px;margin-left:6px">EN COURS</span>':''}
-          </div>
-          <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
-            ${p.cp?`<span style="font-size:11px;color:var(--g4)">👷 ${p.cp}</span>`:''}
-            <span style="font-size:11px;color:var(--g4)">${(p.revisions||[]).length} rév.</span>
-            <button class="btn sm" style="font-size:11px" onclick="deleteProject('${p.dossierId}','${p.projName?.replace(/'/g,"\\'")||''}')">🗑 Supprimer</button>
-          </div>
-        </div>
-        ${revRows ? `<table style="width:100%;border-collapse:collapse">
-          <thead><tr style="background:var(--g2);font-size:10px;color:var(--g4);text-transform:uppercase;letter-spacing:.04em">
-            <th style="padding:4px 10px;text-align:left">Révision</th>
-            <th style="padding:4px 10px;text-align:left">Note</th>
-            <th style="padding:4px 10px;text-align:left">Sauvegardé par</th>
-            <th style="padding:4px 10px;text-align:left">Date</th>
-            <th style="padding:4px 10px"></th>
-          </tr></thead>
-          <tbody>${revRows}</tbody>
-        </table>` : '<div style="padding:10px 14px;font-size:12px;color:var(--g4);font-style:italic">Aucune révision manuelle — autosave actif</div>'}
-      </div>`;
+// Auto-assigner selon les suggestions P06
+function autoMapMatrice(){
+  if(!S.mf.length){toast('⚠ Importez des codes MF d\'abord');return}
+  let linked=0;
+  S.lots.forEach(lot=>{
+    const suggs=P06_DATA.mf_suggestions[lot.disc]||[];
+    suggs.forEach(code=>{
+      const mf=S.mf.find(m=>m.code===code);
+      if(mf&&!lot.mfLinks.includes(code)){lot.mfLinks.push(code);linked++}
     });
-    html += '</div>';
-    body.innerHTML = html;
-  }catch(e){
-    body.innerHTML = '<div style="padding:20px;color:var(--red)">⚠ '+e.message+'</div>';
-  }
+  });
+  renderMatriceMF();
+  renderWBSTree();
+  updateStats();
+  toast('✓ '+linked+' lien(s) créé(s) automatiquement');
 }
 
-// ── Charger une révision ─────────────────────────────────────────────────────
-async function loadRevision(dossierId, revId){
-  toast('⏳ Chargement '+revId+'…');
-  try{
-    const resp = await fetch('/api/revision/'+encodeURIComponent(dossierId)+'/'+encodeURIComponent(revId));
-    if(!resp.ok){ toast('⚠ Erreur '+resp.status); return; }
-    const parsed = await resp.json();
-    _restoreState(parsed);
-    localStorage.setItem('wbs_cg_cur_dossier', dossierId);
-    localStorage.setItem('wbs_cg_last_rev', revId);
-    autoSaveLocal();
-    goTo('lots');
-    toast('✅ '+revId+' chargé — '+parsed.projName);
-  }catch(e){ toast('⚠ '+e.message); }
+// ── TEMPLATES ──
+function saveMatriceTemplate(){
+  const name = prompt('Nom du template :', S.projName+' — Mapping');
+  if(!name) return;
+  const tpl = {
+    name,
+    date: new Date().toISOString(),
+    mapping: S.lots.map(l=>({
+      disc: l.disc,
+      descKey: l.desc.toLowerCase().slice(0,20), // loose match key
+      mfLinks: [...l.mfLinks]
+    }))
+  };
+  // Save templates list
+  let tpls = [];
+  try{ tpls = JSON.parse(localStorage.getItem('wbs_cg_tpl')||'[]'); }catch(e){}
+  tpls.unshift(tpl);
+  tpls = tpls.slice(0, 10); // max 10 templates
+  localStorage.setItem('wbs_cg_tpl', JSON.stringify(tpls));
+  toast('✓ Template "'+name+'" sauvegardé');
 }
 
-// ── Supprimer une révision ───────────────────────────────────────────────────
-async function deleteRevision(dossierId, revId, projName){
-  if(!confirm('Supprimer la révision "'+revId+'" de "'+projName+'" ?')) return;
-  try{
-    const resp = await fetch('/api/revision/'+encodeURIComponent(dossierId)+'/'+encodeURIComponent(revId), {method:'DELETE'});
-    if(resp.ok){ toast('🗑 Révision supprimée'); renderProjetsList(); }
-    else toast('⚠ Erreur suppression');
-  }catch(e){ toast('⚠ '+e.message); }
+function loadMatriceTemplate(){
+  let tpls = [];
+  try{ tpls = JSON.parse(localStorage.getItem('wbs_cg_tpl')||'[]'); }catch(e){}
+  if(!tpls.length){ toast('Aucun template sauvegardé'); return; }
+
+  // Build selection modal content
+  const modal = document.getElementById('tpl-modal');
+  const body = document.getElementById('tpl-modal-body');
+  if(!modal||!body) return;
+
+  body.innerHTML = tpls.map((t,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--g2);cursor:pointer" onclick="applyTemplate(${i})" onmouseover="this.style.background='var(--g1)'" onmouseout="this.style.background=''">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${t.name}</div>
+        <div style="font-size:11px;color:var(--g4)">${new Date(t.date).toLocaleDateString('fr-CA')} · ${t.mapping.length} lots</div>
+      </div>
+      <button class="btn bp sm" onclick="event.stopPropagation();applyTemplate(${i})">Appliquer</button>
+      <button class="btn bd sm" onclick="event.stopPropagation();deleteTemplate(${i})">✕</button>
+    </div>`).join('');
+
+  modal.classList.add('open');
 }
 
-// ── Supprimer un projet entier ───────────────────────────────────────────────
-async function deleteProject(dossierId, projName){
-  if(!confirm('Supprimer TOUT le projet "'+projName+'" ('+dossierId+') et toutes ses révisions ?')) return;
-  // Lister et supprimer tous les blobs du projet
-  try{
-    const resp = await fetch('/api/projectsList');
-    const projects = await resp.json();
-    const p = projects.find(x=>x.dossierId===dossierId);
-    if(!p){ toast('Projet introuvable'); return; }
-    for(const r of (p.revisions||[])){
-      await fetch('/api/revision/'+encodeURIComponent(dossierId)+'/'+encodeURIComponent(r.revId), {method:'DELETE'});
+function applyTemplate(idx){
+  let tpls = [];
+  try{ tpls = JSON.parse(localStorage.getItem('wbs_cg_tpl')||'[]'); }catch(e){}
+  const tpl = tpls[idx];
+  if(!tpl) return;
+
+  let applied = 0;
+  S.lots.forEach(lot=>{
+    // Match by discipline first, then loose desc match
+    const match = tpl.mapping.find(t=>
+      t.disc === lot.disc &&
+      (t.descKey === '' || lot.desc.toLowerCase().includes(t.descKey) || t.descKey.includes(lot.desc.toLowerCase().slice(0,15)))
+    ) || tpl.mapping.find(t=> t.disc === lot.disc);
+
+    if(match){
+      match.mfLinks.forEach(code=>{
+        if(!lot.mfLinks.includes(code)){
+          if(!S.mf.find(m=>m.code===code))
+            S.mf.push({code,desc:'',qty:null,metric:'',heures:null,amount:null});
+          lot.mfLinks.push(code);
+          applied++;
+        }
+      });
     }
-    // Supprimer autosave
-    await fetch('/api/revision/'+encodeURIComponent(dossierId)+'/autosave', {method:'DELETE'}).catch(()=>{});
-    toast('🗑 Projet supprimé');
-    renderProjetsList();
-  }catch(e){ toast('⚠ '+e.message); }
+  });
+
+  document.getElementById('tpl-modal').classList.remove('open');
+  renderMatriceMF();
+  renderWBSTree();
+  updateStats();
+  autoSaveLocal();
+  toast('✓ Template appliqué — '+applied+' lien(s) ajouté(s)');
 }
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-(function initCloud(){
-  // Restaurer dossier/cp dans l'UI depuis localStorage
-  const saved = localStorage.getItem('wbs_cg_p06');
-  if(saved){
-    try{
-      const p = JSON.parse(saved);
-      if(p.dossier && $('hdr-dossier')) $('hdr-dossier').value = p.dossier;
-      if(p.cp && $('hdr-cp')) $('hdr-cp').value = p.cp;
-    }catch(e){}
-  }
-})();
+function deleteTemplate(idx){
+  let tpls = [];
+  try{ tpls = JSON.parse(localStorage.getItem('wbs_cg_tpl')||'[]'); }catch(e){}
+  tpls.splice(idx,1);
+  localStorage.setItem('wbs_cg_tpl', JSON.stringify(tpls));
+  loadMatriceTemplate(); // refresh
+}
 </script>
+
+<!-- ══ TEMPLATE MODAL ══ -->
+<div id="tpl-modal" class="ov">
+  <div class="modal" style="width:500px">
+    <div class="mh">
+      <h3>📂 Charger un template de mapping</h3>
+      <button class="btn bg sm" onclick="document.getElementById('tpl-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="mb" style="padding:0" id="tpl-modal-body"></div>
+    <div class="mf-modal-foot">
+      <button class="btn" onclick="document.getElementById('tpl-modal').classList.remove('open')">Fermer</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
