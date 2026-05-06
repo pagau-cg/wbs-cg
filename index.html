@@ -444,21 +444,30 @@ function togglePhase(num){
   <div class="card" style="min-height:500px;display:flex;flex-direction:column">
     <div class="ch" style="flex-shrink:0">
       <span>🔗</span><span class="ct">Mapping — Drag &amp; Drop MF → WBS</span>
-      <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
-        <span style="font-size:11px;color:var(--g4)">Sélectionnez des codes MF et glissez-les sur un lot</span>
+      <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--g4)">Glissez les codes MF sur un lot</span>
+        <button class="btn sm" style="background:#5C2D91;color:#fff;border-color:#5C2D91" onclick="openAIMappingModal()">🤖 Mapping IA</button>
         <button class="btn bt sm" onclick="autoMap()">⚡ Auto-mapping</button>
         <button class="btn sm" onclick="clearMapSelection()">✕ Désélectionner</button>
       </div>
     </div>
     <div style="display:flex;flex:1;overflow:hidden;gap:0">
-      <div style="width:380px;flex-shrink:0;border-right:2px solid var(--g2);display:flex;flex-direction:column">
-        <div style="padding:8px 12px;border-bottom:1px solid var(--g2);display:flex;gap:6px;align-items:center;flex-shrink:0">
-          <input id="map-mf-search" type="text" placeholder="Filtrer les codes MF..."
-            style="flex:1;padding:5px 8px;border:1px solid var(--g3);border-radius:var(--r);font-size:12px"
-            oninput="renderMapMFPanel()"/>
-          <span id="map-sel-count" style="font-size:11px;color:var(--blue);font-weight:600;white-space:nowrap">0 sélectionné(s)</span>
+      <div style="width:400px;flex-shrink:0;border-right:2px solid var(--g2);display:flex;flex-direction:column">
+        <div style="padding:8px 12px;border-bottom:1px solid var(--g2);display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="map-mf-search" type="text" placeholder="🔍 Béton, semelles, structure…"
+              style="flex:1;padding:5px 8px;border:1px solid var(--g3);border-radius:var(--r);font-size:12px"
+              oninput="renderMapMFPanel()"/>
+            <button onclick="mfExpandAll()" style="font-size:10px;padding:3px 7px;border-radius:var(--r);border:1px solid var(--g3);background:transparent;cursor:pointer;color:var(--g5)" title="Tout développer">▼▼</button>
+            <button onclick="mfCollapseAll()" style="font-size:10px;padding:3px 7px;border-radius:var(--r);border:1px solid var(--g3);background:transparent;cursor:pointer;color:var(--g5)" title="Tout réduire">▶▶</button>
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap" id="mf-div-chips"><!-- Division chips --></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span id="map-sel-count" style="font-size:11px;color:var(--blue);font-weight:600">0 sélectionné(s)</span>
+            <span id="map-mf-count" style="font-size:10px;color:var(--g4)"></span>
+          </div>
         </div>
-        <div id="map-mf-panel" style="flex:1;overflow-y:auto;padding:6px 8px"></div>
+        <div id="map-mf-panel" style="flex:1;overflow-y:auto;padding:4px 6px"></div>
       </div>
       <div style="flex:1;overflow-y:auto;padding:8px 12px">
         <div id="map-wbs-panel"></div>
@@ -1461,76 +1470,157 @@ function renderMapping(){
   renderMapWBSPanel();
 }
 
+// Division names for MF codes
+const MF_DIV_NAMES = {
+  '01':'Conditions générales','02':'Démolition','03':'Béton','04':'Maçonnerie',
+  '05':'Métaux','06':'Bois & plastiques','07':'Étanchéité','08':'Portes & fenêtres',
+  '09':'Finitions','10':'Spécialités','11':'Équipements','12':'Ameublement',
+  '13':'Construction spéciale','14':'Transport vertical','21':'Protection incendie',
+  '22':'Plomberie','23':'CVCA','26':'Électricité','27':'Communications',
+  '28':'Sécurité','31':'Terrassement','32':'Travaux extérieurs','33':'Utilitaires','34':'Transport'
+};
+
+let _mfDivFilter = ''; // active division filter
+
+function mfExpandAll(){ _mfCollapsed.clear(); renderMapMFPanel(); }
+function mfCollapseAll(){
+  // Collapse all division and section levels
+  S.mf.forEach(m=>{
+    _mfCollapsed.add('div:'+m.code.replace(/ /g,'').slice(0,2));
+  });
+  renderMapMFPanel();
+}
+
 function renderMapMFPanel(){
   const el = document.getElementById('map-mf-panel');
   if(!el) return;
-  const q = (document.getElementById('map-mf-search')?.value||'').toLowerCase();
+  const q = (document.getElementById('map-mf-search')?.value||'').toLowerCase().trim();
 
-  // Group by parent (first 8 chars)
-  const groups = {};
+  // ── Build 3-level hierarchy: Division → Section → Code ──
+  // Division = 2 first digits (no spaces): "03"
+  // Section = first 8 chars (with spaces): "03 10 00" style
+  const divs = {}; // { divCode: { name, sections: { sectionCode: [mf...] } } }
+
   S.mf.forEach(m=>{
+    const divCode = m.code.replace(/ /g,'').slice(0,2);
+    const sectionCode = m.code.slice(0,5).trim(); // "03 10"
+
+    // Filter by division chip
+    if(_mfDivFilter && divCode !== _mfDivFilter) return;
+    // Filter by search query
     if(q && !m.code.toLowerCase().includes(q) && !(m.desc||'').toLowerCase().includes(q)) return;
-    const parent = m.code.slice(0,8);
-    if(!groups[parent]) groups[parent] = [];
-    groups[parent].push(m);
+
+    if(!divs[divCode]) divs[divCode] = { name: MF_DIV_NAMES[divCode]||'Division '+divCode, sections:{} };
+    if(!divs[divCode].sections[sectionCode]) divs[divCode].sections[sectionCode] = [];
+    divs[divCode].sections[sectionCode].push(m);
   });
 
-  // Count linked
+  // ── Division chips ──
+  const allDivs = [...new Set(S.mf.map(m=>m.code.replace(/ /g,'').slice(0,2)))].sort();
+  const chipsEl = document.getElementById('mf-div-chips');
+  if(chipsEl){
+    chipsEl.innerHTML = `<span onclick="setMFDivFilter('')" style="padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid ${!_mfDivFilter?'var(--blue)':'var(--g3)'};background:${!_mfDivFilter?'var(--blue-lt)':'transparent'};color:${!_mfDivFilter?'var(--blue)':'var(--g5)'}">Toutes</span>`
+      + allDivs.map(d=>`<span onclick="setMFDivFilter('${d}')" style="padding:2px 7px;border-radius:99px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid ${_mfDivFilter===d?'var(--blue)':'var(--g3)'};background:${_mfDivFilter===d?'var(--blue-lt)':'transparent'};color:${_mfDivFilter===d?'var(--blue)':'var(--g5)'}" title="${MF_DIV_NAMES[d]||d}">${d}</span>`).join('');
+  }
+
   const linkedCodes = new Set(S.lots.flatMap(l=>l.mfLinks));
-
+  let totalShown = 0;
   let html = '';
-  Object.entries(groups).sort(([a],[b])=>a.localeCompare(b)).forEach(([parent, codes])=>{
-    const allLinked  = codes.every(m=>linkedCodes.has(m.code));
-    const anyLinked  = codes.some(m=>linkedCodes.has(m.code));
-    const allSel     = codes.every(m=>_mapSelected.has(m.code));
-    const anySel     = codes.some(m=>_mapSelected.has(m.code));
-    const collapsed  = _mfCollapsed.has(parent);
-    const arrow      = collapsed ? '▶' : '▼';
 
-    html += `<div style="margin-bottom:3px">`;
-    // Group header
-    html += `<div style="display:flex;align-items:center;gap:5px;padding:3px 6px;border-radius:3px;background:${anySel?'var(--blue-lt)':'var(--g1)'};border:1px solid ${anySel?'var(--blue-md)':'var(--g2)'};user-select:none">
-      <input type="checkbox" ${allSel?'checked':anySel?'':''} onclick="event.stopPropagation();toggleMapGroup('${parent}')" style="cursor:pointer;width:14px;height:14px"/>
-      <span onclick="toggleMfGroup('${parent}')" style="cursor:pointer;font-size:10px;color:var(--g4);width:12px;text-align:center;flex-shrink:0">${arrow}</span>
-      <code onclick="toggleMapGroup('${parent}')" style="font-size:11px;font-weight:700;color:var(--blue);cursor:pointer;flex:1">${parent.trim()} <span style="font-weight:400;color:var(--g4)">${codes.length} code(s)</span></code>
-      ${allLinked?'<span style="font-size:10px;color:var(--teal)">✓ Tous liés</span>':anyLinked?'<span style="font-size:10px;color:var(--amber)">Partiel</span>':''}
-    </div>`;
+  // Auto-expand when searching
+  const autoExpand = q.length > 0;
 
-    // Individual codes
-    if(!collapsed){
-    codes.forEach(m=>{
-      const sel     = _mapSelected.has(m.code);
-      const linked  = linkedCodes.has(m.code);
-      html += `<div 
-        draggable="true"
-        ondragstart="startMapDrag(event,'${m.code}')"
-        onclick="toggleMapCode('${m.code}')"
-        style="display:flex;align-items:center;gap:5px;padding:3px 6px 3px 18px;cursor:grab;border-radius:3px;margin-top:1px;
-          background:${sel?'var(--blue)':linked?'var(--teal-lt)':'white'};
-          border:1px solid ${sel?'var(--blue)':linked?'var(--teal-md)':'var(--g2)'};
-          color:${sel?'white':linked?'var(--teal)':'inherit'};
-          user-select:none"
-        title="${m.desc||''} | ${m.amount!=null?m.amount.toLocaleString('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}):''}">
-        <input type="checkbox" ${sel?'checked':''} onclick="event.stopPropagation();toggleMapCode('${m.code}')" 
-          style="cursor:pointer;width:13px;height:13px;accent-color:${sel?'white':'var(--blue)'}"/>
-        <code style="font-size:11px;font-weight:600;min-width:90px">${m.code}</code>
-        <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.desc||''}</span>
-        ${m.amount!=null?`<span style="font-size:10px;opacity:.7">${m.amount.toLocaleString('fr-CA',{maximumFractionDigits:0})} $</span>`:''}
-        ${linked?`<span style="font-size:10px">✓</span>`:''}
-        <span style="font-size:12px;opacity:.4;cursor:grab">⠿</span>
+  Object.entries(divs).sort(([a],[b])=>a.localeCompare(b)).forEach(([divCode, div])=>{
+    const divKey = 'div:'+divCode;
+    const divCollapsed = !autoExpand && _mfCollapsed.has(divKey);
+    const allCodes = Object.values(div.sections).flat();
+    const divLinked = allCodes.filter(m=>linkedCodes.has(m.code)).length;
+    const divSel = allCodes.filter(m=>_mapSelected.has(m.code)).length;
+    totalShown += allCodes.length;
+
+    // ── Division header ──
+    html += `<div style="margin-bottom:2px">
+      <div onclick="toggleMFDivNode('${divKey}')" style="display:flex;align-items:center;gap:5px;padding:5px 8px;background:#1a1a2e;color:#fff;border-radius:4px;cursor:pointer;user-select:none;margin-top:4px">
+        <span style="font-size:10px;width:10px;color:#7eb3ff">${divCollapsed?'▶':'▼'}</span>
+        <span style="font-size:11px;font-weight:700;color:#7eb3ff;min-width:22px">${divCode}</span>
+        <span style="font-size:11px;flex:1">${div.name}</span>
+        <span style="font-size:10px;opacity:.6">${allCodes.length} codes</span>
+        ${divLinked?`<span style="font-size:10px;color:#7fd4b2">✓${divLinked}</span>`:''}
+        ${divSel?`<span style="font-size:10px;color:#bad7f0">●${divSel}</span>`:''}
       </div>`;
-    });
+
+    if(!divCollapsed){
+      Object.entries(div.sections).sort(([a],[b])=>a.localeCompare(b)).forEach(([sectionCode, codes])=>{
+        const secKey = 'sec:'+sectionCode;
+        const secCollapsed = !autoExpand && _mfCollapsed.has(secKey);
+        const secLinked = codes.filter(m=>linkedCodes.has(m.code)).length;
+        const allSecSel = codes.every(m=>_mapSelected.has(m.code));
+        const anySecSel = codes.some(m=>_mapSelected.has(m.code));
+
+        if(codes.length > 1){
+          // Section header (only if multiple codes)
+          html += `<div style="display:flex;align-items:center;gap:5px;padding:3px 6px 3px 14px;background:${anySecSel?'var(--blue-lt)':'var(--g1)'};border:1px solid ${anySecSel?'var(--blue-md)':'var(--g2)'};border-radius:3px;margin-top:2px;user-select:none;cursor:pointer" onclick="toggleMFDivNode('${secKey}')">
+            <input type="checkbox" ${allSecSel?'checked':anySecSel?'indeterminate':''} onclick="event.stopPropagation();toggleMapGroup('${sectionCode.trim()}')" style="cursor:pointer;width:13px;height:13px" ${anySecSel&&!allSecSel?'ref="ind"':''}/>
+            <span style="font-size:9px;color:var(--g4);width:10px">${secCollapsed?'▶':'▼'}</span>
+            <code style="font-size:11px;font-weight:600;color:var(--blue);flex:1">${sectionCode}</code>
+            <span style="font-size:10px;color:var(--g4)">${codes.length} codes</span>
+            ${secLinked===codes.length?'<span style="font-size:10px;color:var(--teal)">✓</span>':secLinked?`<span style="font-size:10px;color:var(--amber)">${secLinked}/${codes.length}</span>`:''}
+          </div>`;
+        }
+
+        if(!secCollapsed || codes.length===1){
+          codes.forEach(m=>{
+            const sel    = _mapSelected.has(m.code);
+            const linked = linkedCodes.has(m.code);
+            const indent = codes.length>1 ? 24 : 14;
+            html += `<div
+              draggable="true"
+              ondragstart="startMapDrag(event,'${m.code}')"
+              onclick="toggleMapCode('${m.code}')"
+              style="display:flex;align-items:center;gap:5px;padding:3px 6px 3px ${indent}px;cursor:grab;border-radius:3px;margin-top:1px;
+                background:${sel?'var(--blue)':linked?'var(--teal-lt)':'white'};
+                border:1px solid ${sel?'var(--blue)':linked?'var(--teal-md)':'var(--g2)'};
+                color:${sel?'white':linked?'var(--teal)':'inherit'};user-select:none"
+              title="${m.desc||m.code}${m.amount!=null?' | '+m.amount.toLocaleString('fr-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0}):''}">
+              <input type="checkbox" ${sel?'checked':''} onclick="event.stopPropagation();toggleMapCode('${m.code}')"
+                style="cursor:pointer;width:13px;height:13px;flex-shrink:0;accent-color:${sel?'white':'var(--blue)'}"/>
+              <code style="font-size:11px;font-weight:600;min-width:72px;flex-shrink:0">${m.code}</code>
+              <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.desc||''}</span>
+              ${m.amount!=null?`<span style="font-size:10px;opacity:.7;flex-shrink:0">${(m.amount/1000).toFixed(0)}k$</span>`:''}
+              ${linked&&!sel?`<span style="font-size:10px;flex-shrink:0">✓</span>`:''}
+              <span style="font-size:11px;opacity:.35;cursor:grab;flex-shrink:0">⠿</span>
+            </div>`;
+          });
+        }
+      });
     }
     html += '</div>';
   });
 
-  if(!html) html = '<div style="padding:20px;font-size:12px;color:var(--g4)">Aucun code MF correspondant.</div>';
+  if(!html) html = `<div style="padding:20px;font-size:12px;color:var(--g4);text-align:center">
+    ${q?`Aucun code MF contenant "<strong>${q}</strong>"`:_mfDivFilter?'Aucun code pour cette division':'Aucun code MF importé'}
+  </div>`;
+
   el.innerHTML = html;
 
-  // Update selection count
   const cnt = document.getElementById('map-sel-count');
   if(cnt) cnt.textContent = _mapSelected.size + ' sélectionné(s)';
+  const cntEl = document.getElementById('map-mf-count');
+  if(cntEl) cntEl.textContent = totalShown+'/'+S.mf.length+' codes';
 }
+
+function setMFDivFilter(div){
+  _mfDivFilter = div;
+  renderMapMFPanel();
+}
+
+function toggleMFDivNode(key){
+  if(_mfCollapsed.has(key)) _mfCollapsed.delete(key);
+  else _mfCollapsed.add(key);
+  renderMapMFPanel();
+}
+// Keep backward compat alias
+function toggleMfGroup(parent){ toggleMFDivNode('sec:'+parent); }
 
 function renderMapWBSPanel(){
   const el = document.getElementById('map-wbs-panel');
@@ -5137,7 +5227,301 @@ updateStats();
   </div>
 </div>
 
-<!-- ══ VUE MATRICE MF → LOTS ══ -->
+<!-- ══ MODAL MAPPING IA ══ -->
+<div id="ai-mapping-modal" class="ov">
+  <div class="modal" style="width:720px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column">
+    <div class="mh" style="flex-shrink:0;background:linear-gradient(135deg,#5C2D91,#2d1b4e);color:#fff;border-radius:6px 6px 0 0">
+      <div>
+        <div style="font-size:11px;opacity:.7;margin-bottom:2px">Anthropic Claude</div>
+        <h3 style="color:#fff">🤖 Mapping IA — Suggestions automatiques</h3>
+      </div>
+      <button class="btn bg sm" style="color:#fff;border-color:rgba(255,255,255,.3)" onclick="closeAIMappingModal()">✕</button>
+    </div>
+
+    <!-- Étape 1 : sélection lots à mapper -->
+    <div id="ai-step-1" class="mb" style="flex:1;overflow-y:auto">
+      <div style="background:var(--purple-lt);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--purple)">
+        💡 L'IA analyse les descriptions de vos lots WBS et vos codes MF importés pour suggérer les liens les plus pertinents. Sélectionnez les lots à mapper et lancez l'analyse.
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <div style="font-size:12px;font-weight:600;color:var(--g5)">Lots à analyser :</div>
+        <button class="btn sm" onclick="aiSelectLots('unmapped')">⚠ Non mappés seulement (${S.lots.filter(l=>!l.mfLinks.length).length})</button>
+        <button class="btn sm" onclick="aiSelectLots('all')">Tous les lots</button>
+        <button class="btn sm" onclick="aiSelectLots('none')">Aucun</button>
+      </div>
+
+      <div id="ai-lots-list" style="max-height:280px;overflow-y:auto;border:1px solid var(--g3);border-radius:var(--r)"></div>
+
+      <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="ff" style="flex:1;min-width:200px">
+          <label>Instructions supplémentaires (optionnel)</label>
+          <input id="ai-extra-prompt" type="text" placeholder="ex: Ce projet est un bâtiment industriel avec charpente acier"
+            style="width:100%;font-size:13px"/>
+        </div>
+      </div>
+
+      <div id="ai-mapping-error" style="display:none;color:var(--red);font-size:12px;margin-top:8px;padding:8px 12px;background:var(--red-lt);border-radius:var(--r)"></div>
+    </div>
+
+    <!-- Étape 2 : résultats IA -->
+    <div id="ai-step-2" style="display:none;flex:1;overflow-y:auto;padding:14px 18px">
+      <div id="ai-results-body"></div>
+    </div>
+
+    <div class="mf-modal-foot" style="flex-shrink:0">
+      <button class="btn" onclick="closeAIMappingModal()">Annuler</button>
+      <div id="ai-step-1-btns">
+        <button class="btn" style="background:#5C2D91;color:#fff;border-color:#5C2D91" onclick="runAIMapping()" id="ai-run-btn">
+          🤖 Analyser avec IA
+        </button>
+      </div>
+      <div id="ai-step-2-btns" style="display:none;gap:8px">
+        <button class="btn" onclick="aiGoBack()">← Modifier la sélection</button>
+        <button class="btn bp" onclick="applyAISuggestions()" id="ai-apply-btn">✓ Appliquer les suggestions cochées</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// MAPPING IA — Analyse par Claude Sonnet
+// ══════════════════════════════════════════════════════════
+
+let _aiSuggestions = []; // [{lotId, lotCode, mfCodes:[{code,desc,reason}]}]
+let _aiSelectedLots = new Set();
+
+function openAIMappingModal(){
+  if(!S.mf.length){ toast('⚠ Importez des codes MF d\'abord'); return; }
+  if(!S.lots.length){ toast('⚠ Créez des lots L4 d\'abord'); return; }
+
+  // Reset state
+  _aiSuggestions = [];
+  document.getElementById('ai-step-1').style.display = 'block';
+  document.getElementById('ai-step-2').style.display = 'none';
+  document.getElementById('ai-step-1-btns').style.display = 'block';
+  document.getElementById('ai-step-2-btns').style.display = 'none';
+  document.getElementById('ai-mapping-error').style.display = 'none';
+  document.getElementById('ai-extra-prompt').value = '';
+
+  // Auto-select unmapped lots
+  aiSelectLots('unmapped');
+  document.getElementById('ai-mapping-modal').classList.add('open');
+}
+
+function closeAIMappingModal(){
+  document.getElementById('ai-mapping-modal').classList.remove('open');
+}
+
+function aiSelectLots(mode){
+  if(mode==='unmapped') _aiSelectedLots = new Set(S.lots.filter(l=>!l.mfLinks.length).map(l=>l.id));
+  else if(mode==='all') _aiSelectedLots = new Set(S.lots.map(l=>l.id));
+  else _aiSelectedLots = new Set();
+  renderAILotsList();
+}
+
+function renderAILotsList(){
+  const el = document.getElementById('ai-lots-list');
+  const PHASE_NAMES = {'1':'Préconstr.','2':'Construction','3':'MES'};
+  let html = S.lots.map(l=>{
+    const disc = P06_DATA.disciplines.find(d=>d.code===l.disc);
+    const sel = _aiSelectedLots.has(l.id);
+    const mapped = l.mfLinks.length > 0;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--g2);background:${sel?'var(--blue-lt)':'transparent'};cursor:pointer" onclick="toggleAILot('${l.id}')">
+      <input type="checkbox" ${sel?'checked':''} onclick="event.stopPropagation();toggleAILot('${l.id}')" style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);flex-shrink:0"/>
+      <code style="font-size:11px;color:var(--blue);font-weight:700;min-width:100px">${l.code}</code>
+      <span style="font-size:12px;flex:1">${l.desc}</span>
+      <span style="font-size:10px;color:var(--g4)">${disc?disc.desc:l.disc}</span>
+      ${mapped?`<span style="font-size:10px;color:var(--teal)">✓ ${l.mfLinks.length} MF</span>`:'<span style="font-size:10px;color:var(--amber)">Non mappé</span>'}
+    </div>`;
+  }).join('');
+  if(!html) html = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--g4)">Aucun lot WBS</div>';
+  el.innerHTML = html;
+  // Update button
+  const btn = document.getElementById('ai-run-btn');
+  if(btn) btn.textContent = '🤖 Analyser '+_aiSelectedLots.size+' lot(s) avec IA';
+}
+
+function toggleAILot(id){
+  if(_aiSelectedLots.has(id)) _aiSelectedLots.delete(id);
+  else _aiSelectedLots.add(id);
+  renderAILotsList();
+}
+
+async function runAIMapping(){
+  if(!_aiSelectedLots.size){ toast('⚠ Sélectionnez au moins un lot'); return; }
+
+  const btn = document.getElementById('ai-run-btn');
+  const errEl = document.getElementById('ai-mapping-error');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = '⏳ Analyse en cours…';
+
+  const selectedLots = S.lots.filter(l=>_aiSelectedLots.has(l.id));
+  const extraPrompt = document.getElementById('ai-extra-prompt').value.trim();
+
+  // Build compact MF list (max 150 codes to stay within context)
+  const mfList = S.mf.slice(0, 150).map(m=>`${m.code}: ${m.desc||''}${m.amount?` (${Math.round(m.amount/1000)}k$)`:''}`).join('\n');
+
+  const lotsText = selectedLots.map(l=>{
+    const disc = P06_DATA.disciplines.find(d=>d.code===l.disc);
+    return `- ${l.code} | ${disc?disc.desc:'Disc '+l.disc} | "${l.desc}"${l.qty?` | ${l.qty} ${l.unit}`:''}`;
+  }).join('\n');
+
+  const systemPrompt = `Tu es un expert en gestion de projets de construction au Québec, spécialisé dans la structure WBS selon l'Annexe P-06 de Construction Gauthier et les codes Masterformat.
+
+Tu dois associer des codes MF (Masterformat) aux lots WBS L4 fournis.
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans backticks.
+Format attendu:
+{"suggestions":[{"lotCode":"1.00.06.01","mfCodes":[{"code":"03 10 00","reason":"Coffrage nécessaire pour les semelles"},{"code":"03 20 00","reason":"Armature pour béton des semelles"}]}]}`;
+
+  const userPrompt = `${extraPrompt ? 'Contexte projet: '+extraPrompt+'\n\n' : ''}LOTS WBS À MAPPER:
+${lotsText}
+
+CODES MF DISPONIBLES:
+${mfList}
+
+Pour chaque lot, suggère les 2 à 5 codes MF les plus pertinents parmi ceux disponibles. Justifie brièvement chaque association.`;
+
+  try{
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+
+    if(!resp.ok){
+      const err = await resp.text();
+      throw new Error('API '+resp.status+': '+err.slice(0,200));
+    }
+
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text || '';
+
+    // Parse JSON
+    let parsed;
+    try{
+      const clean = raw.replace(/```json|```/g,'').trim();
+      parsed = JSON.parse(clean);
+    }catch(e){
+      throw new Error('Réponse IA non parseable : '+raw.slice(0,100));
+    }
+
+    _aiSuggestions = (parsed.suggestions||[]).map(s=>{
+      const lot = S.lots.find(l=>l.code===s.lotCode);
+      return { lotId: lot?.id, lotCode: s.lotCode, mfCodes: s.mfCodes||[] };
+    }).filter(s=>s.lotId);
+
+    showAISuggestions();
+
+  }catch(e){
+    errEl.textContent = '⚠ Erreur : '+e.message;
+    errEl.style.display = 'block';
+  }finally{
+    btn.disabled = false;
+    btn.textContent = '🤖 Analyser '+_aiSelectedLots.size+' lot(s) avec IA';
+  }
+}
+
+function showAISuggestions(){
+  document.getElementById('ai-step-1').style.display = 'none';
+  document.getElementById('ai-step-2').style.display = 'block';
+  document.getElementById('ai-step-1-btns').style.display = 'none';
+  document.getElementById('ai-step-2-btns').style.display = 'flex';
+
+  const el = document.getElementById('ai-results-body');
+
+  if(!_aiSuggestions.length){
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--g4)">Aucune suggestion générée.</div>';
+    return;
+  }
+
+  let html = `<div style="font-size:12px;color:var(--purple);background:var(--purple-lt);border-radius:var(--r);padding:8px 12px;margin-bottom:14px">
+    ✓ ${_aiSuggestions.length} lot(s) analysé(s) — Décochez les suggestions à ignorer avant d'appliquer.
+  </div>`;
+
+  _aiSuggestions.forEach((s,si)=>{
+    const lot = S.lots.find(l=>l.id===s.lotId);
+    if(!lot) return;
+    const disc = P06_DATA.disciplines.find(d=>d.code===lot.disc);
+
+    html += `<div style="margin-bottom:14px;border:1px solid var(--g3);border-radius:var(--r);overflow:hidden">
+      <div style="background:var(--g1);padding:8px 12px;display:flex;align-items:center;gap:8px">
+        <code style="font-size:12px;color:var(--blue);font-weight:700">${lot.code}</code>
+        <span style="font-size:13px;font-weight:600">${lot.desc}</span>
+        <span style="font-size:11px;color:var(--g4);margin-left:auto">${disc?disc.desc:lot.disc}</span>
+      </div>
+      <div style="padding:6px 12px">`;
+
+    s.mfCodes.forEach((mc,mi)=>{
+      const mfExists = S.mf.find(m=>m.code===mc.code);
+      const alreadyLinked = lot.mfLinks.includes(mc.code);
+      const chkId = `ai-chk-${si}-${mi}`;
+      html += `<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--g2)">
+        <input type="checkbox" id="${chkId}" data-si="${si}" data-mi="${mi}" ${alreadyLinked?'disabled':''} ${!alreadyLinked?'checked':''} style="width:15px;height:15px;margin-top:2px;cursor:pointer;accent-color:var(--blue);flex-shrink:0"/>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px">
+            <code style="font-size:12px;font-weight:700;color:var(--blue)">${mc.code}</code>
+            ${mfExists?`<span style="font-size:11px;color:var(--g5)">${mfExists.desc||''}</span>`:'<span style="font-size:10px;color:var(--amber)">⚠ Non importé</span>'}
+            ${alreadyLinked?'<span style="font-size:10px;color:var(--teal)">✓ Déjà lié</span>':''}
+            ${mfExists?.amount?`<span style="font-size:10px;color:var(--g4);margin-left:auto">${Math.round(mfExists.amount/1000)}k$</span>`:''}
+          </div>
+          <div style="font-size:11px;color:var(--g4);margin-top:2px;font-style:italic">${mc.reason||''}</div>
+        </div>
+      </div>`;
+    });
+
+    html += '</div></div>';
+  });
+
+  el.innerHTML = html;
+}
+
+function aiGoBack(){
+  document.getElementById('ai-step-1').style.display = 'block';
+  document.getElementById('ai-step-2').style.display = 'none';
+  document.getElementById('ai-step-1-btns').style.display = 'block';
+  document.getElementById('ai-step-2-btns').style.display = 'none';
+}
+
+function applyAISuggestions(){
+  let added = 0;
+  const checkboxes = document.querySelectorAll('#ai-results-body input[type=checkbox]:checked:not(:disabled)');
+  checkboxes.forEach(chk=>{
+    const si = parseInt(chk.dataset.si);
+    const mi = parseInt(chk.dataset.mi);
+    const s = _aiSuggestions[si];
+    if(!s) return;
+    const mc = s.mfCodes[mi];
+    if(!mc) return;
+    const lot = S.lots.find(l=>l.id===s.lotId);
+    if(!lot) return;
+    if(!lot.mfLinks.includes(mc.code)){
+      // Add to MF list if not already there
+      if(!S.mf.find(m=>m.code===mc.code))
+        S.mf.push({code:mc.code, desc:mc.reason||'', qty:null, metric:'', heures:null, amount:null});
+      lot.mfLinks.push(mc.code);
+      added++;
+    }
+  });
+
+  closeAIMappingModal();
+  renderMapping();
+  renderWBSTree();
+  updateStats();
+  autoSaveLocal();
+  toast('✅ '+added+' lien(s) IA appliqué(s)');
+}
+</script>
+
+</body>
+</html>
 <div id="view-matrice" class="hidden">
   <div class="card" style="min-height:500px">
     <div class="ch">
