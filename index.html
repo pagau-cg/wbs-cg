@@ -335,12 +335,26 @@ function togglePhase(num){
   <div class="card">
     <div class="ch"><span class="step-label">4</span><span class="ct">Lots mesurables — Niveau 4 (créés par le CP)</span></div>
     <div class="cb">
+
+      <!-- ── DÉMARRAGE RAPIDE ── -->
+      <div style="background:linear-gradient(135deg,#EFF6FC,#F0EBF8);border:1px solid #BAD7F0;border-radius:var(--r);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--g6);margin-bottom:3px">⚡ Démarrage rapide</div>
+          <div style="font-size:11px;color:var(--g5)">Créez plusieurs lots d'un coup au lieu d'un à la fois</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-left:auto">
+          <button class="btn bp sm" onclick="openTemplatesModal()" style="font-size:12px">📋 Templates CG</button>
+          <button class="btn sm" style="background:#5C2D91;color:#fff;border-color:#5C2D91;font-size:12px" onclick="openAILotsModal()">🤖 Générer via IA</button>
+          <button class="btn sm" style="font-size:12px" onclick="openBibliModal()">📚 Bibliothèque rapide</button>
+        </div>
+      </div>
+
       <div class="rule-box">📌 <strong>Règle P-06 :</strong> Chaque lot doit être <strong>mesurable</strong>, <strong>planifiable</strong>, avoir <u>un ou plusieurs codes MF rattachés</u>, et permettre un <strong>% d'avancement objectif</strong>.<br>
       ✔ "Semelles secteur 1" &nbsp;✔ "Murs fondation secteur 1" &nbsp; ❌ "Structure complète" &nbsp; ❌ "Divers"</div>
 
       <!-- Lot creation form -->
       <div class="lot-form">
-        <div class="lot-form-title">Nouveau lot</div>
+        <div class="lot-form-title">Nouveau lot (manuel)</div>
         <div class="fr">
           <div class="ff">
             <label>Phase</label>
@@ -758,6 +772,37 @@ function togglePhase(num){
           </thead>
           <tbody id="av-tbody"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="view-matrice" class="hidden">
+  <div class="card" style="min-height:500px">
+    <div class="ch">
+      <span>⊞</span>
+      <span class="ct">Matrice d'assignation — MF → Lots L4</span>
+      <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <select id="mat-f-phase" style="font-size:12px;padding:3px 7px;border:1px solid var(--g3);border-radius:var(--r)" onchange="renderMatriceMF()">
+          <option value="">Toutes les phases</option>
+        </select>
+        <select id="mat-f-sec" style="font-size:12px;padding:3px 7px;border:1px solid var(--g3);border-radius:var(--r)" onchange="renderMatriceMF()">
+          <option value="">Tous les secteurs</option>
+        </select>
+        <select id="mat-f-disc" style="font-size:12px;padding:3px 7px;border:1px solid var(--g3);border-radius:var(--r)" onchange="renderMatriceMF()">
+          <option value="">Toutes les disciplines</option>
+        </select>
+        <button class="btn sm bt" onclick="autoMapMatrice()" style="font-size:11px">⚡ Auto-assigner</button>
+        <button class="btn sm bp" onclick="saveMatriceTemplate()" style="font-size:11px">💾 Sauver template</button>
+        <button class="btn sm" onclick="loadMatriceTemplate()" style="font-size:11px">📂 Charger template</button>
+      </div>
+    </div>
+    <div class="cb" style="padding:0">
+      <!-- Légende + stats -->
+      <div id="mat-stats" style="display:flex;gap:16px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--g2);font-size:11px;flex-wrap:wrap"></div>
+      <!-- Matrice scrollable -->
+      <div style="overflow:auto;max-height:calc(100vh - 280px)">
+        <div id="mat-body"></div>
       </div>
     </div>
   </div>
@@ -5522,37 +5567,6 @@ function applyAISuggestions(){
 
 </body>
 </html>
-<div id="view-matrice" class="hidden">
-  <div class="card" style="min-height:500px">
-    <div class="ch">
-      <span>⊞</span>
-      <span class="ct">Matrice d'assignation — MF → Lots L4</span>
-      <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <select id="mat-f-phase" style="font-size:12px;padding:3px 7px;border:1px solid var(--g3);border-radius:var(--r)" onchange="renderMatriceMF()">
-          <option value="">Toutes les phases</option>
-        </select>
-        <select id="mat-f-sec" style="font-size:12px;padding:3px 7px;border:1px solid var(--g3);border-radius:var(--r)" onchange="renderMatriceMF()">
-          <option value="">Tous les secteurs</option>
-        </select>
-        <select id="mat-f-disc" style="font-size:12px;padding:3px 7px;border:1px solid var(--g3);border-radius:var(--r)" onchange="renderMatriceMF()">
-          <option value="">Toutes les disciplines</option>
-        </select>
-        <button class="btn sm bt" onclick="autoMapMatrice()" style="font-size:11px">⚡ Auto-assigner</button>
-        <button class="btn sm bp" onclick="saveMatriceTemplate()" style="font-size:11px">💾 Sauver template</button>
-        <button class="btn sm" onclick="loadMatriceTemplate()" style="font-size:11px">📂 Charger template</button>
-      </div>
-    </div>
-    <div class="cb" style="padding:0">
-      <!-- Légende + stats -->
-      <div id="mat-stats" style="display:flex;gap:16px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--g2);font-size:11px;flex-wrap:wrap"></div>
-      <!-- Matrice scrollable -->
-      <div style="overflow:auto;max-height:calc(100vh - 280px)">
-        <div id="mat-body"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
 // ══════════════════════════════════════════════════════════════════
 // MATRICE MF → LOTS L4
@@ -5876,6 +5890,514 @@ function deleteTemplate(idx){
     </div>
   </div>
 </div>
+
+
+<!-- ══ MODAL TEMPLATES CG ══ -->
+<div id="templates-modal" class="ov">
+  <div class="modal" style="width:700px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column">
+    <div class="mh" style="flex-shrink:0">
+      <div>
+        <div style="font-size:11px;color:var(--g4);margin-bottom:2px">Démarrage rapide</div>
+        <h3>📋 Templates CG — Lots types par projet</h3>
+      </div>
+      <button class="btn bg sm" onclick="document.getElementById('templates-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="mb" style="flex:1;overflow-y:auto">
+      <div style="background:var(--g1);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div class="ff">
+          <label>Phase cible</label>
+          <select id="tpl-phase" style="font-size:13px">
+            <option value="2" selected>2 — Construction</option>
+            <option value="1">1 — Préconstruction</option>
+            <option value="3">3 — Mise en service</option>
+          </select>
+        </div>
+        <div class="ff">
+          <label>Secteur cible</label>
+          <select id="tpl-sec" style="font-size:13px"></select>
+        </div>
+        <div style="font-size:11px;color:var(--g4);align-self:center">Les lots s'ajouteront avec la phase et le secteur sélectionnés.</div>
+      </div>
+      <div id="tpl-cards-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+    </div>
+    <div class="mf-modal-foot" style="flex-shrink:0">
+      <button class="btn" onclick="document.getElementById('templates-modal').classList.remove('open')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL BIBLIOTHÈQUE RAPIDE ══ -->
+<div id="biblio-modal" class="ov">
+  <div class="modal" style="width:740px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column">
+    <div class="mh" style="flex-shrink:0">
+      <div>
+        <div style="font-size:11px;color:var(--g4);margin-bottom:2px">Bibliothèque CG</div>
+        <h3>📚 Bibliothèque rapide — Sélection multi-lots</h3>
+      </div>
+      <button class="btn bg sm" onclick="document.getElementById('biblio-modal').classList.remove('open')">✕</button>
+    </div>
+    <div style="padding:8px 14px;border-bottom:1px solid var(--g2);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0">
+      <input id="biblio-search" type="text" placeholder="🔍 Filtrer les lots…" style="flex:1;min-width:160px;padding:5px 9px;border:1px solid var(--g3);border-radius:var(--r);font-size:12px" oninput="renderBiblioList()"/>
+      <select id="biblio-phase" style="font-size:12px;padding:4px 8px;border:1px solid var(--g3);border-radius:var(--r)">
+        <option value="2" selected>Phase 2</option><option value="1">Phase 1</option><option value="3">Phase 3</option>
+      </select>
+      <select id="biblio-sec" style="font-size:12px;padding:4px 8px;border:1px solid var(--g3);border-radius:var(--r)"></select>
+      <span id="biblio-sel-count" style="font-size:11px;color:var(--blue);font-weight:600;white-space:nowrap">0 sélectionné(s)</span>
+    </div>
+    <div style="display:flex;gap:4px;padding:6px 14px;flex-wrap:wrap;border-bottom:1px solid var(--g2);flex-shrink:0" id="biblio-div-tabs"></div>
+    <div class="mb" style="flex:1;overflow-y:auto;padding:0" id="biblio-list"></div>
+    <div class="mf-modal-foot" style="flex-shrink:0">
+      <button class="btn" onclick="document.getElementById('biblio-modal').classList.remove('open')">Annuler</button>
+      <button class="btn bp" onclick="applyBiblioSelection()">+ Ajouter les lots sélectionnés</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL GÉNÉRATION IA LOTS ══ -->
+<div id="ai-lots-modal" class="ov">
+  <div class="modal" style="width:680px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column">
+    <div class="mh" style="flex-shrink:0;background:linear-gradient(135deg,#5C2D91,#2d1b4e);color:#fff;border-radius:6px 6px 0 0">
+      <div>
+        <div style="font-size:11px;opacity:.7;margin-bottom:2px">Anthropic Claude</div>
+        <h3 style="color:#fff">🤖 Générer les lots WBS via IA</h3>
+      </div>
+      <button class="btn bg sm" style="color:#fff;border-color:rgba(255,255,255,.3)" onclick="document.getElementById('ai-lots-modal').classList.remove('open')">✕</button>
+    </div>
+    <div id="ai-lots-step1" class="mb" style="flex:1;overflow-y:auto">
+      <div style="background:var(--purple-lt);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--purple)">
+        💡 Décrivez votre projet. L'IA génère une structure de lots L4 complète selon l'Annexe P-06 CG.
+      </div>
+      <div class="ff" style="margin-bottom:12px">
+        <label>Type de projet</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px" id="ai-lots-type-btns">
+          <button class="btn sm" onclick="setAILotType('industriel')" id="aitype-industriel">🏭 Industriel</button>
+          <button class="btn sm" onclick="setAILotType('commercial')" id="aitype-commercial">🏬 Commercial</button>
+          <button class="btn sm" onclick="setAILotType('institutionnel')" id="aitype-institutionnel">🏫 Institutionnel</button>
+          <button class="btn sm" onclick="setAILotType('residentiel')" id="aitype-residentiel">🏠 Résidentiel</button>
+        </div>
+      </div>
+      <div class="ff" style="margin-bottom:12px">
+        <label>Description du projet *</label>
+        <textarea id="ai-lots-desc" rows="4" placeholder="ex: Entrepôt industriel de 8 000 m² avec bureau annexe…" style="width:100%;resize:vertical;font-family:var(--font);font-size:13px;padding:8px 10px;border:1px solid var(--g3);border-radius:var(--r)"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="ff" style="flex:1;min-width:140px">
+          <label>Phase cible</label>
+          <select id="ai-lots-phase" style="font-size:13px;width:100%">
+            <option value="2" selected>2 — Construction</option>
+            <option value="1">1 — Préconstruction</option>
+            <option value="3">3 — MES</option>
+          </select>
+        </div>
+        <div class="ff" style="flex:1;min-width:140px">
+          <label>Secteur cible</label>
+          <select id="ai-lots-sec" style="font-size:13px;width:100%"></select>
+        </div>
+        <div class="ff" style="flex:1;min-width:140px">
+          <label>Granularité</label>
+          <select id="ai-lots-granul" style="font-size:13px;width:100%">
+            <option value="standard" selected>Standard (15-25 lots)</option>
+            <option value="detaille">Détaillé (25-40 lots)</option>
+            <option value="minimal">Minimal (10-15 lots)</option>
+          </select>
+        </div>
+      </div>
+      <div id="ai-lots-error" style="display:none;color:var(--red);font-size:12px;margin-top:10px;padding:8px 12px;background:var(--red-lt);border-radius:var(--r)"></div>
+    </div>
+    <div id="ai-lots-step2" style="display:none;flex:1;overflow-y:auto;padding:14px 18px">
+      <div id="ai-lots-results"></div>
+    </div>
+    <div class="mf-modal-foot" style="flex-shrink:0">
+      <button class="btn" onclick="document.getElementById('ai-lots-modal').classList.remove('open')">Annuler</button>
+      <div id="ai-lots-btns1"><button class="btn" style="background:#5C2D91;color:#fff;border-color:#5C2D91" id="ai-lots-run-btn" onclick="runAILots()">🤖 Générer les lots</button></div>
+      <div id="ai-lots-btns2" style="display:none;gap:8px">
+        <button class="btn" onclick="aiLotsGoBack()">← Modifier</button>
+        <button class="btn bp" onclick="applyAILots()">✓ Ajouter les lots cochés</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// CRÉATION RAPIDE DE LOTS L4 — Templates, Bibliothèque, IA
+// ══════════════════════════════════════════════════════════════════
+
+const LIB_TO_DISC = {
+  'A.01':'01','A.02':'03','A.03':'02','A.04':'01','A.05':'01','A.06':'01',
+  'A.07':'01','A.08':'01','A.09':'01','A.10':'01','A.11':'01','A.12':'01','A.13':'01',
+  'B.01':'05','B.02':'05','B.03':'05',
+  'B.04':'06','B.05':'06','B.06':'06','B.07':'06','B.08':'06','B.09':'06',
+  'B.10':'07','B.11':'07',
+  'B.12':'06','B.13':'06','B.14':'06','B.15':'06',
+  'C.01':'08','C.02':'08','C.03':'08','C.04':'08','C.05':'08',
+  'C.06':'09','C.07':'09','C.08':'09',
+  'C.09':'08','C.10':'08','C.11':'08','C.12':'08','C.13':'08','C.14':'08','C.15':'08','C.16':'08',
+  'D.01':'07','D.02':'07','D.03':'10','D.04':'14','D.05':'08',
+  'E.01':'10','E.02':'10','E.03':'10','E.04':'10','E.05':'12',
+  'E.06':'13','E.07':'13','E.08':'11','E.09':'11','E.10':'11','E.11':'11',
+  'E.12':'11','E.13':'11','E.14':'11','E.15':'14','E.16':'14','E.17':'11',
+  'F1.01':'18',
+  'F2.01':'15','F2.02':'15','F2.03':'15','F2.04':'15',
+  'F3.01':'16','F3.02':'16','F3.03':'16','F3.04':'16','F3.05':'16','F3.06':'16','F3.07':'16','F3.08':'16',
+  'F4.01':'17','F4.02':'17','F4.03':'17','F4.04':'17','F4.05':'17','F4.06':'17','F4.07':'17','F4.08':'17',
+  'F5.01':'17','F5.02':'17','F5.03':'17','F5.04':'17',
+  'G.01':'05','G.02':'05','G.03':'05','G.04':'05','G.05':'05','G.06':'05','G.07':'05','G.08':'05','G.09':'05',
+  'H.01':'20','H.02':'20','H.03':'20'
+};
+
+const CG_TEMPLATES = {
+  base:{label:'Base commune',icon:'⚙️',desc:'FG chantier + Protection incendie + Plomberie + CVCA + Électricité',color:'var(--blue)',
+    codes:['A.01','A.02','A.03','A.04','A.05','A.06','A.09','A.10','A.11','A.12','A.13',
+           'F1.01','F2.01','F2.02','F2.03','F2.04','F3.01','F3.02','F3.03','F3.04','F3.05','F3.06','F3.08',
+           'F4.01','F4.02','F4.03','F4.05','F4.06','F4.08']},
+  industriel:{label:'Industriel',icon:'🏭',desc:'Entrepôt, usine, hangar — Charpente acier, enveloppe tôle, site',color:'#E67E22',
+    codes:['A.01','A.02','A.03','A.04','A.05','A.06','A.09','A.10','A.12','A.13',
+           'B.01','B.02','B.04','B.05','B.06','B.07','B.10','B.11','B.12','B.13','B.14','B.15',
+           'C.01','C.03','C.06','C.07','C.10','C.13','C.14',
+           'F1.01','F2.01','F2.02','F3.01','F3.03','F3.04','F3.05',
+           'F4.01','F4.02','F4.03','F4.05','F4.06',
+           'G.01','G.02','G.05','G.06','G.07','G.08','H.01','H.02']},
+  commercial:{label:'Commercial',icon:'🏬',desc:'Centre commercial, bureau, restaurant — Finitions soignées',color:'#16A085',
+    codes:['A.01','A.02','A.03','A.04','A.05','A.06','A.07','A.09','A.10','A.12','A.13',
+           'B.04','B.05','B.06','B.07','B.08','B.10','B.11','B.12','B.13','B.14',
+           'C.02','C.05','C.06','C.07','C.09','C.10','C.11','C.12','C.15','C.16',
+           'D.01','D.03','D.04',
+           'E.01','E.05','E.06','E.07','E.08','E.09','E.10','E.12',
+           'F1.01','F2.01','F2.02','F2.03','F2.04',
+           'F3.01','F3.02','F3.03','F3.04','F3.05','F3.06','F3.08',
+           'F4.01','F4.02','F4.03','F4.05','F4.06','F4.08','F5.01','F5.03',
+           'G.01','G.02','G.03','G.04']},
+  institutionnel:{label:'Institutionnel',icon:'🏫',desc:'École, hôpital, bureau gouvernemental — Finitions complètes',color:'#8E44AD',
+    codes:['A.01','A.02','A.03','A.04','A.05','A.06','A.07','A.09','A.10','A.12','A.13',
+           'B.04','B.05','B.06','B.07','B.08','B.09','B.10','B.11','B.12','B.13','B.14',
+           'C.02','C.05','C.06','C.07','C.09','C.10','C.11','C.15','C.16',
+           'D.01','D.03','D.04',
+           'E.01','E.03','E.04','E.05','E.06','E.07','E.08','E.09','E.10','E.11','E.12','E.13',
+           'F1.01','F2.01','F2.02','F2.03','F2.04',
+           'F3.01','F3.02','F3.03','F3.04','F3.05','F3.06','F3.07','F3.08',
+           'F4.01','F4.02','F4.03','F4.04','F4.05','F4.06','F4.08',
+           'F5.01','F5.02','F5.03','F5.04',
+           'G.01','G.02','G.03','G.04']}
+};
+
+function libCodeToLot(libCode, phase, secCode){
+  const lib = WBS_LIB_LOTS.find(l=>l.code===libCode);
+  if(!lib) return null;
+  const disc = LIB_TO_DISC[libCode];
+  if(!disc || !S.activeDiscs.has(disc)) return null;
+  const existing = S.lots.filter(l=>l.phase===phase && l.sec===secCode && l.disc===disc);
+  // Check for duplicate description
+  if(existing.some(l=>l.desc===lib.desc)) return null;
+  const num = pad(existing.length+1);
+  const code = `${phase}.${secCode}.${disc}.${num}`;
+  if(S.lots.find(l=>l.code===code)) return null;
+  return {
+    id:'lot_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+    code,phase,sec:secCode,disc,num,
+    desc:lib.desc, qty:0, unit:lib.unit||'Forfait',
+    pct:0,qtyReal:0,note:'',mfLinks:[...lib.mf],
+    debutSem:0,duree:0,avMode:'pct',predecesseurs:[],mfAlloc:{},_libRef:libCode
+  };
+}
+
+function addLotsFromLibCodes(libCodes, phase, secCode){
+  let added=0,skipped=0;
+  libCodes.forEach(code=>{
+    const lot=libCodeToLot(code,phase,secCode);
+    if(lot){S.lots.push(lot);added++;}else skipped++;
+  });
+  S.lots.sort((a,b)=>a.code.localeCompare(b.code));
+  renderWBSTree();updateStats();autoSaveLocal();
+  return {added,skipped};
+}
+
+// ── TEMPLATES ──
+function openTemplatesModal(){
+  const sel=document.getElementById('tpl-sec');
+  if(sel) sel.innerHTML=S.secteurs.map(s=>`<option value="${s.code}">${s.code} — ${s.desc}</option>`).join('');
+  const grid=document.getElementById('tpl-cards-grid');
+  if(grid) grid.innerHTML=Object.entries(CG_TEMPLATES).map(([key,tpl])=>{
+    const count=tpl.codes.filter(c=>WBS_LIB_LOTS.find(l=>l.code===c)&&LIB_TO_DISC[c]&&S.activeDiscs.has(LIB_TO_DISC[c])).length;
+    const total=tpl.codes.filter(c=>WBS_LIB_LOTS.find(l=>l.code===c)).length;
+    const discSet=[...new Set(tpl.codes.map(c=>LIB_TO_DISC[c]).filter(Boolean))];
+    const discNames=discSet.map(d=>{const o=P06_DATA.disciplines.find(x=>x.code===d);return o?o.desc:d;}).slice(0,4);
+    return `<div style="border:1px solid var(--g3);border-radius:var(--r);padding:14px;background:var(--white);display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:22px">${tpl.icon}</span>
+        <div><div style="font-size:14px;font-weight:700;color:var(--g6)">${tpl.label}</div>
+        <div style="font-size:11px;color:var(--g4)">${count}/${total} lots actifs · ${discSet.length} disciplines</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--g5)">${tpl.desc}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px">
+        ${discNames.map(d=>`<span style="font-size:10px;padding:1px 6px;background:var(--g1);border-radius:99px;color:var(--g5)">${d}</span>`).join('')}
+        ${discNames.length<discSet.length?`<span style="font-size:10px;color:var(--g4)">+${discSet.length-discNames.length}</span>`:''}
+      </div>
+      <button class="btn bp sm" style="border-color:${tpl.color};background:${tpl.color}" onclick="applyTemplateCG('${key}')">
+        ${tpl.icon} Ajouter ces ${count} lots
+      </button>
+    </div>`;
+  }).join('');
+  document.getElementById('templates-modal').classList.add('open');
+}
+
+function applyTemplateCG(key){
+  const tpl=CG_TEMPLATES[key]; if(!tpl) return;
+  const phase=document.getElementById('tpl-phase')?.value||'2';
+  const sec=document.getElementById('tpl-sec')?.value||'00';
+  const {added,skipped}=addLotsFromLibCodes(tpl.codes,phase,sec);
+  document.getElementById('templates-modal').classList.remove('open');
+  goTo('lots');
+  toast(`✅ Template ${tpl.label} — ${added} lot(s) ajouté(s)${skipped?' ('+skipped+' ignorés)':''}`);
+}
+
+// ── BIBLIOTHÈQUE RAPIDE ──
+let _biblioSelected=new Set(), _biblioDivFilter='ALL';
+
+function openBiblioModal(){
+  _biblioSelected.clear(); _biblioDivFilter='ALL';
+  const sel=document.getElementById('biblio-sec');
+  if(sel) sel.innerHTML=S.secteurs.map(s=>`<option value="${s.code}">${s.code} — ${s.desc}</option>`).join('');
+  renderBiblioDivTabs(); renderBiblioList();
+  document.getElementById('biblio-modal').classList.add('open');
+}
+
+function renderBiblioDivTabs(){
+  const el=document.getElementById('biblio-div-tabs'); if(!el) return;
+  const all=[{code:'ALL',name:'Toutes'},...WBS_LIB_DIVS];
+  el.innerHTML=all.map(d=>`<span onclick="setBiblioDiv('${d.code}')"
+    style="padding:3px 9px;border-radius:99px;font-size:11px;font-weight:500;cursor:pointer;user-select:none;
+      border:1px solid ${_biblioDivFilter===d.code?'var(--blue)':'var(--g3)'};
+      background:${_biblioDivFilter===d.code?'var(--blue-lt)':'transparent'};
+      color:${_biblioDivFilter===d.code?'var(--blue)':'var(--g5)'}">${d.code==='ALL'?'Toutes':d.code}</span>`).join('');
+}
+
+function setBiblioDiv(code){_biblioDivFilter=code;renderBiblioDivTabs();renderBiblioList();}
+
+function renderBiblioList(){
+  const el=document.getElementById('biblio-list'); if(!el) return;
+  const q=(document.getElementById('biblio-search')?.value||'').toLowerCase();
+  const filtered=WBS_LIB_LOTS.filter(l=>{
+    if(_biblioDivFilter!=='ALL'&&l.div!==_biblioDivFilter) return false;
+    if(q&&!l.desc.toLowerCase().includes(q)&&!l.code.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const byDiv={};
+  filtered.forEach(l=>{if(!byDiv[l.div])byDiv[l.div]=[];byDiv[l.div].push(l);});
+  let html='';
+  Object.entries(byDiv).forEach(([div,lots])=>{
+    const divObj=WBS_LIB_DIVS.find(d=>d.code===div);
+    html+=`<div style="padding:4px 10px 2px;font-size:10px;font-weight:700;color:var(--g4);text-transform:uppercase;letter-spacing:.05em;background:var(--g1);border-bottom:1px solid var(--g2)">${div} — ${divObj?divObj.name:''}</div>`;
+    lots.forEach(l=>{
+      const disc=LIB_TO_DISC[l.code];
+      const discObj=P06_DATA.disciplines.find(d=>d.code===disc);
+      const sel=_biblioSelected.has(l.code);
+      const active=disc&&S.activeDiscs.has(disc);
+      html+=`<div onclick="${active?`toggleBiblioLot('${l.code}')`:''}"
+        style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--g2);
+          background:${sel?'var(--blue-lt)':!active?'var(--g1)':'transparent'};
+          cursor:${active?'pointer':'not-allowed'};opacity:${active?1:.5}">
+        <input type="checkbox" ${sel?'checked':''} ${!active?'disabled':''}
+          onclick="event.stopPropagation();${active?`toggleBiblioLot('${l.code}')`:''}"
+          style="width:15px;height:15px;cursor:pointer;accent-color:var(--blue);flex-shrink:0"/>
+        <code style="font-size:11px;color:var(--blue);font-weight:700;min-width:52px">${l.code}</code>
+        <span style="font-size:12px;flex:1">${l.desc}</span>
+        <span style="font-size:10px;color:var(--g4);flex-shrink:0">${discObj?discObj.desc:disc||'?'}</span>
+        <span style="font-size:10px;color:var(--g4);flex-shrink:0">${l.unit}</span>
+        ${!active?'<span style="font-size:10px;color:var(--amber)">Disc. inactive</span>':''}
+      </div>`;
+    });
+  });
+  if(!html) html='<div style="padding:20px;text-align:center;font-size:12px;color:var(--g4)">Aucun lot trouvé</div>';
+  el.innerHTML=html;
+  const cnt=document.getElementById('biblio-sel-count');
+  if(cnt) cnt.textContent=_biblioSelected.size+' sélectionné(s)';
+}
+
+function toggleBiblioLot(code){
+  if(_biblioSelected.has(code))_biblioSelected.delete(code);else _biblioSelected.add(code);
+  renderBiblioList();
+}
+
+function applyBiblioSelection(){
+  if(!_biblioSelected.size){toast('⚠ Sélectionnez au moins un lot');return;}
+  const phase=document.getElementById('biblio-phase')?.value||'2';
+  const sec=document.getElementById('biblio-sec')?.value||'00';
+  const {added,skipped}=addLotsFromLibCodes([..._biblioSelected],phase,sec);
+  document.getElementById('biblio-modal').classList.remove('open');
+  toast(`✅ ${added} lot(s) ajouté(s)${skipped?' · '+skipped+' ignoré(s)':''}`);
+}
+
+// ── GÉNÉRATION IA LOTS ──
+let _aiLotsResult=[], _aiLotType='';
+
+function openAILotsModal(){
+  _aiLotsResult=[];_aiLotType='';
+  document.getElementById('ai-lots-step1').style.display='block';
+  document.getElementById('ai-lots-step2').style.display='none';
+  document.getElementById('ai-lots-btns1').style.display='block';
+  document.getElementById('ai-lots-btns2').style.display='none';
+  document.getElementById('ai-lots-error').style.display='none';
+  const sel=document.getElementById('ai-lots-sec');
+  if(sel) sel.innerHTML=S.secteurs.map(s=>`<option value="${s.code}">${s.code} — ${s.desc}</option>`).join('');
+  document.getElementById('ai-lots-modal').classList.add('open');
+}
+
+function setAILotType(type){
+  _aiLotType=type;
+  document.querySelectorAll('#ai-lots-type-btns button').forEach(b=>{
+    const active=b.id==='aitype-'+type;
+    b.style.background=active?'var(--purple)':'';
+    b.style.color=active?'#fff':'';
+    b.style.borderColor=active?'var(--purple)':'';
+  });
+  const ex={
+    industriel:'Entrepôt industriel de 8 000 m² avec bureau annexe de 400 m², charpente acier, enveloppe tôle profilée, quais de chargement, pont roulant 5T.',
+    commercial:'Centre commercial de 3 500 m², structure béton armé, façade vitrée, finitions commerciales, stationnement extérieur 120 places.',
+    institutionnel:'École primaire de 2 800 m², 2 étages, béton armé, finitions durables, salles de classe, gymnase, cafétéria.',
+    residentiel:'Immeuble résidentiel de 24 logements, 4 étages, structure béton, enveloppe mixte brique/composite, stationnement souterrain.'
+  };
+  const ta=document.getElementById('ai-lots-desc');
+  if(ta&&ex[type]) ta.value=ex[type];
+}
+
+function aiLotsGoBack(){
+  document.getElementById('ai-lots-step1').style.display='block';
+  document.getElementById('ai-lots-step2').style.display='none';
+  document.getElementById('ai-lots-btns1').style.display='block';
+  document.getElementById('ai-lots-btns2').style.display='none';
+}
+
+async function runAILots(){
+  const desc=(document.getElementById('ai-lots-desc')?.value||'').trim();
+  if(!desc){toast('⚠ Décrivez le projet');return;}
+  const btn=document.getElementById('ai-lots-run-btn');
+  const errEl=document.getElementById('ai-lots-error');
+  errEl.style.display='none';
+  btn.disabled=true; btn.textContent='⏳ Génération en cours…';
+  const granul=document.getElementById('ai-lots-granul')?.value||'standard';
+  const activDiscs=P06_DATA.disciplines.filter(d=>S.activeDiscs.has(d.code)).map(d=>d.code+': '+d.desc).join(', ');
+  const granulText=granul==='detaille'?'Génère 25 à 40 lots':granul==='minimal'?'Génère 10 à 15 lots':'Génère 15 à 25 lots';
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',max_tokens:3000,
+        system:`Tu es un expert en gestion de projets de construction au Québec selon l'Annexe P-06 de Construction Gauthier. Génère des lots WBS L4 mesurables et planifiables. Disciplines P-06 actives: ${activDiscs}. Réponds UNIQUEMENT avec un JSON valide sans backticks. Format: {"lots":[{"disc":"06","desc":"Semelles de fondation béton armé","unit":"M³","libRef":"B.06"},...]}`,
+        messages:[{role:'user',content:`Projet: ${desc}\n\n${granulText}. Pour chaque lot: disc (discipline P-06 active), desc (description concrète), unit, libRef (code bibliothèque CG si applicable sinon "").`}]
+      })
+    });
+    if(!resp.ok) throw new Error('API '+resp.status);
+    const data=await resp.json();
+    const raw=data.content?.[0]?.text||'';
+    const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    _aiLotsResult=(parsed.lots||[]).filter(l=>l.disc&&l.desc);
+    showAILotsResults();
+  }catch(e){
+    errEl.textContent='⚠ Erreur : '+e.message;
+    errEl.style.display='block';
+  }finally{
+    btn.disabled=false; btn.textContent='🤖 Générer les lots';
+  }
+}
+
+function showAILotsResults(){
+  document.getElementById('ai-lots-step1').style.display='none';
+  document.getElementById('ai-lots-step2').style.display='block';
+  document.getElementById('ai-lots-btns1').style.display='none';
+  document.getElementById('ai-lots-btns2').style.display='flex';
+  const el=document.getElementById('ai-lots-results');
+  if(!_aiLotsResult.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--g4)">Aucun lot généré.</div>';return;}
+  const byDisc={};
+  _aiLotsResult.forEach((l,i)=>{if(!byDisc[l.disc])byDisc[l.disc]=[];byDisc[l.disc].push({...l,_idx:i});});
+  let html=`<div style="background:var(--purple-lt);border-radius:var(--r);padding:8px 12px;margin-bottom:14px;font-size:12px;color:var(--purple)">
+    ✓ ${_aiLotsResult.length} lots générés — Décochez les lots à ignorer.
+    <button onclick="aiLotsToggleAll(true)" class="btn sm" style="margin-left:8px;font-size:11px">Tout cocher</button>
+    <button onclick="aiLotsToggleAll(false)" class="btn sm" style="font-size:11px">Tout décocher</button>
+  </div>`;
+  Object.entries(byDisc).sort(([a],[b])=>parseInt(a)-parseInt(b)).forEach(([disc,lots])=>{
+    const discObj=P06_DATA.disciplines.find(d=>d.code===disc);
+    const col=DISC_COLORS[disc]||'#888';
+    html+=`<div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:${col}18;border-left:3px solid ${col};border-radius:0 var(--r) var(--r) 0;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:700;color:${col}">${disc} — ${discObj?discObj.desc:'Disc '+disc}</span>
+        <span style="font-size:10px;color:var(--g4)">${lots.length} lot(s)</span>
+      </div>`;
+    lots.forEach(l=>{
+      const libLot=l.libRef?WBS_LIB_LOTS.find(x=>x.code===l.libRef):null;
+      html+=`<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px 6px 14px;border-bottom:1px solid var(--g2)">
+        <input type="checkbox" id="ailot-${l._idx}" data-idx="${l._idx}" checked style="width:15px;height:15px;margin-top:2px;cursor:pointer;accent-color:var(--blue);flex-shrink:0"/>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:500">${l.desc}</div>
+          <div style="font-size:10px;color:var(--g4);margin-top:1px">Unité: ${l.unit||'Forfait'}${libLot?' · Réf: <code>'+l.libRef+'</code>':''}</div>
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+
+function aiLotsToggleAll(state){
+  document.querySelectorAll('#ai-lots-results input[type=checkbox]').forEach(c=>c.checked=state);
+}
+
+function applyAILots(){
+  const phase=document.getElementById('ai-lots-phase')?.value||'2';
+  const sec=document.getElementById('ai-lots-sec')?.value||'00';
+  let added=0;
+  document.querySelectorAll('#ai-lots-results input[type=checkbox]:checked').forEach(chk=>{
+    const idx=parseInt(chk.dataset.idx);
+    const l=_aiLotsResult[idx]; if(!l) return;
+    if(!S.activeDiscs.has(l.disc)) return;
+    const existing=S.lots.filter(x=>x.phase===phase&&x.sec===sec&&x.disc===l.disc);
+    const num=pad(existing.length+1);
+    const code=`${phase}.${sec}.${l.disc}.${num}`;
+    if(S.lots.find(x=>x.code===code)) return;
+    const libLot=l.libRef?WBS_LIB_LOTS.find(x=>x.code===l.libRef):null;
+    S.lots.push({
+      id:'lot_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+      code,phase,sec,disc:l.disc,num,
+      desc:l.desc,qty:0,unit:l.unit||'Forfait',
+      pct:0,qtyReal:0,note:'',mfLinks:libLot?[...libLot.mf]:[],
+      debutSem:0,duree:0,avMode:'pct',predecesseurs:[],mfAlloc:{}
+    });
+    added++;
+  });
+  S.lots.sort((a,b)=>a.code.localeCompare(b.code));
+  renderWBSTree();updateStats();autoSaveLocal();
+  document.getElementById('ai-lots-modal').classList.remove('open');
+  toast(`✅ ${added} lot(s) IA ajouté(s) au WBS`);
+}
+
+// Ouvrir les modals via le template card
+function openTemplatesModal(){ 
+  const sel=document.getElementById('tpl-sec');
+  if(sel) sel.innerHTML=S.secteurs.map(s=>`<option value="${s.code}">${s.code} — ${s.desc}</option>`).join('');
+  const grid=document.getElementById('tpl-cards-grid');
+  if(grid){
+    grid.innerHTML=Object.entries(CG_TEMPLATES).map(([key,tpl])=>{
+      const count=tpl.codes.filter(c=>WBS_LIB_LOTS.find(l=>l.code===c)&&LIB_TO_DISC[c]&&S.activeDiscs.has(LIB_TO_DISC[c])).length;
+      const total=tpl.codes.filter(c=>WBS_LIB_LOTS.find(l=>l.code===c)).length;
+      const discSet=[...new Set(tpl.codes.map(c=>LIB_TO_DISC[c]).filter(Boolean))];
+      const discNames=discSet.map(d=>{const o=P06_DATA.disciplines.find(x=>x.code===d);return o?o.desc:d;}).slice(0,4);
+      return `<div style="border:1px solid var(--g3);border-radius:var(--r);padding:14px;background:var(--white);display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:22px">${tpl.icon}</span>
+          <div><div style="font-size:14px;font-weight:700;color:var(--g6)">${tpl.label}</div>
+          <div style="font-size:11px;color:var(--g4)">${count}/${total} lots actifs · ${discSet.length} disc.</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--g5)">${tpl.desc}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">${discNames.map(d=>`<span style="font-size:10px;padding:1px 6px;background:var(--g1);border-radius:99px;color:var(--g5)">${d}</span>`).join('')}${discNames.length<discSet.length?`<span style="font-size:10px;color:var(--g4)">+${discSet.length-discNames.length}</span>`:''}</div>
+        <button class="btn bp sm" style="border-color:${tpl.color};background:${tpl.color}" onclick="applyTemplateCG('${key}')">
+          ${tpl.icon} Ajouter ces ${count} lots
+        </button>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('templates-modal').classList.add('open');
+}
+</script>
 
 </body>
 </html>
